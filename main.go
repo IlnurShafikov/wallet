@@ -8,10 +8,12 @@ import (
 )
 
 func main() {
-
 	h := &health.HelloHandler{}
 	http.HandleFunc("/health", h.Live)
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		panic(err)
+	}
 
 	usersWallet := wallet.NewWallet()
 	usersWallet.Create("01")
