@@ -2,27 +2,21 @@ package main
 
 import (
 	"fmt"
-	"github.com/IlnurShafikov/wallet/services/health"
 	"github.com/IlnurShafikov/wallet/services/wallet"
+	"log"
 	"net/http"
 )
 
 func main() {
-	h := &health.HelloHandler{}
-	http.HandleFunc("/health", h.Live)
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		panic(err)
+	userWallet := wallet.NewWallet()
+	handler := wallet.NewHandler(userWallet)
+
+	http.HandleFunc("/create_wallet", handler.CreateWallet)
+	fmt.Println("Server work")
+	http.HandleFunc("/balance", handler.GetWallet)
+	http.HandleFunc("/update", handler.UpdateBalance)
+
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal("Error start server", err)
 	}
-
-	usersWallet := wallet.NewWallet()
-	usersWallet.Create("01")
-	usersWallet.Add("01", 10)
-
-	balance, err := usersWallet.Get("01")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(balance)
-
 }
