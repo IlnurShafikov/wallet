@@ -6,8 +6,7 @@ type CreateWalletRequest struct {
 }
 
 type GetBalanceRequest struct {
-	UserID  string `json:"user_id"`
-	Balance int    `json:"balance"`
+	UserID string `json:"user_id"`
 }
 
 type UpdateBalanceRequest struct {

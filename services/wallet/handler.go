@@ -21,16 +21,20 @@ func NewHandler(wallet *InMemory) *Handler {
 func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
+	if err != nil {
+		http.Error(w, "Error read body", http.StatusInternalServerError)
+		return
+	}
 
 	req := request.CreateWalletRequest{}
 	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, "Неверный формат запроса", http.StatusBadRequest)
+		http.Error(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
 
 	result, err := h.createWallet(req.UserID, req.Balance)
 	if err != nil {
-		http.Error(w, "create wallet failed", http.StatusInternalServerError)
+		http.Error(w, "Create wallet failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -41,17 +45,16 @@ func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := json.Marshal(&response.CreateWalletResponse{
-		UserID:  req.UserID,
 		Balance: result.balance,
 	})
 
 	if err != nil {
-		http.Error(w, "marshal response failed", http.StatusInternalServerError)
+		http.Error(w, "Marshal response failed", http.StatusInternalServerError)
 		return
 	}
 
 	if _, err := w.Write(resp); err != nil {
-		http.Error(w, "send response to client failed", http.StatusInternalServerError)
+		http.Error(w, "Send response to client failed", http.StatusInternalServerError)
 		return
 	}
 }
@@ -88,20 +91,24 @@ func (h *Handler) createWallet(userID string, balance int) (*createWalletRespons
 func (h *Handler) GetWallet(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
+	if err != nil {
+		http.Error(w, "Error read body", http.StatusInternalServerError)
+		return
+	}
 
 	req := request.GetBalanceRequest{}
 	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, "Неверный формат запроса", http.StatusBadRequest)
+		http.Error(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
 
 	balance, err := h.wallet.Get(req.UserID)
 	if err != nil {
-		http.Error(w, "Ошибка при получение баланса "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Error getting balance "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	res := response.GetBalanceResponse{
+	res := response.BalanceResponse{
 		Balance: balance,
 	}
 
@@ -132,15 +139,14 @@ func (h *Handler) UpdateBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res := response.UpdateBalanceResponse{
-		UserID:  req.UserID,
+	res := response.BalanceResponse{
 		Balance: newBalance,
 	}
 
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(res)
 	if err != nil {
-		http.Error(w, "error to send", http.StatusInternalServerError)
+		http.Error(w, "Error to send", http.StatusInternalServerError)
 		return
 	}
 
