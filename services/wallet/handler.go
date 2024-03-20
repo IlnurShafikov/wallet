@@ -44,7 +44,7 @@ func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	resp, err := json.Marshal(&response.CreateWalletResponse{
+	resp, err := json.Marshal(&response.BalanceResponse{
 		Balance: result.balance,
 	})
 
