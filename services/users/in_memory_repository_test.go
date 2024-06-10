@@ -2,6 +2,7 @@ package users
 
 import (
 	"fmt"
+	"github.com/IlnurShafikov/wallet/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -13,7 +14,7 @@ func TestCreate(t *testing.T) {
 		login     string
 		password  []byte
 		before    func(nw *InMemoryRepository)
-		expect    *User
+		expect    *models.User
 		expectErr error
 	}{
 		{
@@ -21,13 +22,13 @@ func TestCreate(t *testing.T) {
 			login:    loginUser,
 			password: []byte("123"),
 			before:   func(nw *InMemoryRepository) {},
-			expect:   &User{1, loginUser, []byte("123")},
+			expect:   &models.User{1, loginUser, []byte("123")},
 		}, {
 			name:     "creat an existing user",
 			login:    loginUser,
 			password: []byte("123"),
 			before: func(nw *InMemoryRepository) {
-				nw.users[loginUser] = User{1, loginUser, []byte("123")}
+				nw.users[loginUser] = models.User{1, loginUser, []byte("123")}
 			},
 
 			expectErr: fmt.Errorf("this user %s exists", loginUser),
@@ -52,13 +53,13 @@ func TestGet(t *testing.T) {
 	tests := []struct {
 		name      string
 		login     string
-		expect    *User
+		expect    *models.User
 		expectErr error
 	}{
 		{
 			name:   "get real user",
 			login:  loginUser,
-			expect: &User{1, loginUser, password},
+			expect: &models.User{1, loginUser, password},
 		},
 		{
 			name:      "get wrong user",

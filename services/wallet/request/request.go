@@ -1,15 +1,11 @@
 package request
 
-type CreateWalletRequest struct {
-	UserID  string `json:"user_id"`
-	Balance int    `json:"balance"`
+import "github.com/IlnurShafikov/wallet/models"
+
+type CreateWallet struct {
+	Balance models.Balance `json:"balance"`
 }
 
-type GetBalanceRequest struct {
-	UserID string `json:"user_id"`
-}
-
-type UpdateBalanceRequest struct {
-	UserID string `json:"user_id"`
-	Amount int    `json:"amount"`
+type UpdateBalance struct {
+	Amount int `json:"amount"`
 }

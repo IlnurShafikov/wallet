@@ -2,152 +2,115 @@ package wallet
 
 import (
 	"encoding/json"
+	"github.com/IlnurShafikov/wallet/models"
 	"github.com/IlnurShafikov/wallet/services/wallet/request"
 	"github.com/IlnurShafikov/wallet/services/wallet/response"
-	"io"
-	"net/http"
+	"github.com/gofiber/fiber/v2"
 )
 
 type Handler struct {
-	wallet *InMemory
+	wallet *InMemoryRepository
 }
 
-func NewHandler(wallet *InMemory) *Handler {
-	return &Handler{
+func NewHandler(
+	router fiber.Router,
+	wallet *InMemoryRepository,
+) *Handler {
+	h := &Handler{
 		wallet: wallet,
 	}
+
+	group := router.Group("/wallet")
+
+	group.Post("/:userID", h.CreateWallet)
+	group.Get("/:userID", h.GetWallet)
+	group.Put("/:userID", h.UpdateBalance)
+	//group.Delete("/" /*h.DeleteWallet*/)
+	//group.Patch("/" /*h.ChangeWallet*/)
+
+	return h
 }
 
-func (h *Handler) CreateWallet(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
+	userID, err := getUserID(fCtx)
 	if err != nil {
-		http.Error(w, "Error read body", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	req := request.CreateWalletRequest{}
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, "Invalid request format", http.StatusBadRequest)
-		return
+	req := request.CreateWallet{}
+	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
+		return err
 	}
 
-	result, err := h.createWallet(req.UserID, req.Balance)
+	err = h.wallet.Create(userID, req.Balance)
 	if err != nil {
-		http.Error(w, "Create wallet failed", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	if result.created {
-		w.WriteHeader(http.StatusCreated)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-
-	resp, err := json.Marshal(&response.BalanceResponse{
-		Balance: result.balance,
+	err = fCtx.Status(fiber.StatusCreated).JSON(response.BalanceResponse{
+		Balance: req.Balance,
 	})
-
 	if err != nil {
-		http.Error(w, "Marshal response failed", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	if _, err := w.Write(resp); err != nil {
-		http.Error(w, "Send response to client failed", http.StatusInternalServerError)
-		return
-	}
+	return nil
 }
 
-type createWalletResponse struct {
-	balance int
-	created bool
-}
-
-func (h *Handler) createWallet(userID string, balance int) (*createWalletResponse, error) {
-	created := h.wallet.Create(userID)
-
-	var err error
-
-	var walletBalance int
-	if created {
-		walletBalance, err = h.wallet.Add(userID, balance)
-	} else {
-		walletBalance, err = h.wallet.Get(userID)
-	}
-
+func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
+	userID, err := getUserID(fCtx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	resp := &createWalletResponse{
-		balance: walletBalance,
-		created: created,
-	}
-
-	return resp, nil
-}
-
-func (h *Handler) GetWallet(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+	balance, err := h.wallet.Get(userID)
 	if err != nil {
-		http.Error(w, "Error read body", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	req := request.GetBalanceRequest{}
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, "Invalid request format", http.StatusBadRequest)
-		return
-	}
-
-	balance, err := h.wallet.Get(req.UserID)
-	if err != nil {
-		http.Error(w, "Error getting balance "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	res := response.BalanceResponse{
+	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
 		Balance: balance,
+	})
+	if err != nil {
+		return err
 	}
 
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(res)
-	if err != nil {
-		return
-	}
+	return nil
+
 }
 
-func (h *Handler) UpdateBalance(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	defer r.Body.Close()
+func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
+	userID, err := getUserID(fCtx)
 	if err != nil {
-		http.Error(w, "Error read body", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	req := request.UpdateBalanceRequest{}
-	if err := json.Unmarshal(body, &req); err != nil {
-		http.Error(w, "Error form", http.StatusInternalServerError)
-		return
+	req := request.UpdateBalance{}
+	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
+		return err
 	}
 
-	newBalance, err := h.wallet.Add(req.UserID, req.Amount)
+	newBalance, err := h.wallet.Change(userID, req.Amount)
 	if err != nil {
-		http.Error(w, "Error balance", http.StatusInternalServerError)
-		return
+		return err
 	}
 
-	res := response.BalanceResponse{
+	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
 		Balance: newBalance,
-	}
-
-	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(res)
+	})
 	if err != nil {
-		http.Error(w, "Error to send", http.StatusInternalServerError)
-		return
+		return nil
 	}
 
+	return nil
+
+}
+
+func getUserID(fCtx *fiber.Ctx) (models.UserID, error) {
+	id, err := fCtx.ParamsInt("userID")
+	if err != nil {
+		return 0, err
+	}
+
+	return models.UserID(id), nil
 }
