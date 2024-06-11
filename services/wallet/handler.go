@@ -25,8 +25,6 @@ func NewHandler(
 	group.Post("/:userID", h.CreateWallet)
 	group.Get("/:userID", h.GetWallet)
 	group.Put("/:userID", h.UpdateBalance)
-	//group.Delete("/" /*h.DeleteWallet*/)
-	//group.Patch("/" /*h.ChangeWallet*/)
 
 	return h
 }
@@ -50,11 +48,8 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 	err = fCtx.Status(fiber.StatusCreated).JSON(response.BalanceResponse{
 		Balance: req.Balance,
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }
 
 func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
@@ -71,11 +66,8 @@ func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
 	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
 		Balance: balance,
 	})
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 
 }
 
@@ -98,12 +90,8 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
 		Balance: newBalance,
 	})
-	if err != nil {
-		return nil
-	}
 
-	return nil
-
+	return err
 }
 
 func getUserID(fCtx *fiber.Ctx) (models.UserID, error) {

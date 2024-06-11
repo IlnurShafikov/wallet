@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"errors"
+	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 )
 
@@ -15,8 +16,8 @@ type InMemoryRepository struct {
 	wallet map[models.UserID]models.Balance
 }
 
-// NewWalletRepository - создание нового экземпляра кошелька в оп
-func NewWalletRepository() *InMemoryRepository {
+// NewInMemoryRepository - создание нового экземпляра кошелька в оп
+func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{
 		wallet: make(map[models.UserID]models.Balance),
 	}
@@ -36,7 +37,7 @@ func (i *InMemoryRepository) Get(userID models.UserID) (models.Balance, error) {
 func (i *InMemoryRepository) Create(userID models.UserID, balance models.Balance) error {
 	_, exists := i.wallet[userID]
 	if exists {
-		return ErrWalletAlreadyExists
+		return fmt.Errorf("%w", ErrWalletAlreadyExists)
 	}
 
 	i.wallet[userID] = balance
@@ -46,18 +47,18 @@ func (i *InMemoryRepository) Create(userID models.UserID, balance models.Balance
 }
 
 // Change - Манипуляции с балансом
-func (i *InMemoryRepository) Change(userID models.UserID, amount int) (models.Balance, error) {
+func (i *InMemoryRepository) Change(userID models.UserID, amount models.Balance) (models.Balance, error) {
 	balance, ok := i.wallet[userID]
 	if !ok {
 		return 0, ErrWalletNotFound
 	}
 
-	newBalance := models.Balance(int(balance) + amount)
-	if newBalance < 0 {
+	balance += amount
+	if balance < 0 {
 		return 0, ErrWalletNotEnoughMoney
 	}
 
-	i.wallet[userID] = newBalance
+	i.wallet[userID] = balance
 
-	return newBalance, nil
+	return balance, nil
 }

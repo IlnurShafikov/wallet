@@ -7,5 +7,5 @@ type CreateWallet struct {
 }
 
 type UpdateBalance struct {
-	Amount int `json:"amount"`
+	Amount models.Balance `json:"amount"`
 }
