@@ -10,12 +10,17 @@ import (
 
 var ErrAuthorizationFailed = errors.New("authorization failed")
 
-type userRepository interface {
+type usersGetter interface {
 	Get(login string) (*models.User, error)
 }
 
+type hasherPasswordVerify interface {
+	Verify(password string, hashPassword []byte) error
+}
+
 type AuthorizationHandler struct {
-	userRepository userRepository
+	userRepository usersGetter
+	hashedVerify   hasherPasswordVerify
 }
 
 type LoginRequest struct {
@@ -24,14 +29,18 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	UserID models.UserID
+	UserID models.UserID `json:"user_id"`
 }
 
 func NewAuthorization(
 	router fiber.Router,
-	userRepository userRepository,
+	userRepository usersGetter,
+	hashed hasherPasswordVerify,
 ) *AuthorizationHandler {
-	auth := &AuthorizationHandler{userRepository: userRepository}
+	auth := &AuthorizationHandler{
+		userRepository: userRepository,
+		hashedVerify:   hashed,
+	}
 
 	router.Post("/login", auth.Authorization)
 
@@ -53,7 +62,8 @@ func (h *AuthorizationHandler) Authorization(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	if string(user.Password) != req.Password {
+	err = h.hashedVerify.Verify(req.Password, user.Password)
+	if err != nil {
 		return ErrAuthorizationFailed
 	}
 
