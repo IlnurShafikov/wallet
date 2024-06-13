@@ -1,12 +1,22 @@
 package configs
 
 import (
+	"errors"
 	"github.com/caarlos0/env/v10"
 	"strconv"
 )
 
 type Config struct {
-	Port int `env:"PORT" envDefault:"8080"`
+	Port   int    `env:"PORT" envDefault:"8080"`
+	Secret string `env:"SECRET"`
+}
+
+func (c Config) Validate() error {
+	if c.Secret == "" {
+		return errors.New("secret is empty")
+	}
+
+	return nil
 }
 
 func (c Config) GetServerPort() string {

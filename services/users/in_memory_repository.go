@@ -1,9 +1,12 @@
 package users
 
 import (
+	"errors"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 )
+
+var ErrUserNotFound = errors.New("user not found")
 
 type InMemoryRepository struct {
 	users  map[string]models.User
@@ -30,7 +33,7 @@ func (i *InMemoryRepository) Create(login string, password []byte) (*models.User
 	i.lastID++
 
 	user := models.User{
-		UserID:   i.lastID,
+		ID:       i.lastID,
 		Login:    login,
 		Password: password,
 	}
@@ -43,7 +46,7 @@ func (i *InMemoryRepository) Create(login string, password []byte) (*models.User
 func (i *InMemoryRepository) Get(login string) (*models.User, error) {
 	user, exist := i.getUser(login)
 	if !exist {
-		return nil, fmt.Errorf("this user %s does not exist", login)
+		return nil, ErrUserNotFound
 	}
 
 	return &user, nil
