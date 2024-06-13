@@ -1,30 +1,34 @@
 package wallet
 
 import (
+	"github.com/IlnurShafikov/wallet/models"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCreate(t *testing.T) {
-	const userID = "1"
+	const userID models.UserID = 1
 
 	tests := []struct {
-		name   string
-		userID string
-		before func(uw *InMemory)
-		expect bool
+		name    string
+		userID  models.UserID
+		balance models.Balance
+		before  func(uw *InMemoryRepository)
+		expect  bool
 	}{
 		{
-			name:   "добавление пользователя которого не существует",
-			userID: userID,
-			expect: true,
-			before: func(uw *InMemory) {},
+			name:    "добавление пользователя которого не существует",
+			userID:  userID,
+			expect:  true,
+			balance: 0,
+			before:  func(uw *InMemoryRepository) {},
 		},
 		{
-			name:   "добавление пользователя который существует",
-			userID: userID,
-			before: func(uw *InMemory) {
+			name:    "добавление пользователя который существует",
+			userID:  userID,
+			balance: 10,
+			before: func(uw *InMemoryRepository) {
 				uw.wallet[userID] = 0
 			},
 			expect: false,
@@ -33,9 +37,9 @@ func TestCreate(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			uw := NewWallet()
+			uw := NewWalletRepository()
 			testCase.before(uw)
-			got := uw.Create(testCase.userID)
+			got := uw.Create(testCase.userID, testCase.balance)
 			assert.Equal(t, testCase.expect, got)
 		})
 	}
@@ -44,19 +48,19 @@ func TestCreate(t *testing.T) {
 func TestGet(t *testing.T) {
 	tests := []struct {
 		name      string
-		userID    string
+		userID    models.UserID
 		expect    int
 		expectErr error
 	}{
 		{
 			name:      "Проверяем что пользователь существует",
-			userID:    "user01",
+			userID:    123,
 			expect:    0,
 			expectErr: nil,
 		},
 		{
 			name:      "Проверяем что пользователь не существует",
-			userID:    "",
+			userID:    0,
 			expect:    0,
 			expectErr: ErrWalletNotFound,
 		},
@@ -64,8 +68,8 @@ func TestGet(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			uw := NewWallet()
-			_ = uw.Create("user01")
+			uw := NewWalletRepository()
+			_ = uw.Create(123, 10)
 			got, err := uw.Get(tc.userID)
 			assert.Equal(t, tc.expect, got)
 			assert.Equal(t, tc.expectErr, err)
@@ -76,35 +80,40 @@ func TestGet(t *testing.T) {
 
 func TestAdd(t *testing.T) {
 	tests := []struct {
-		userID    string
-		balance   int
+		name      string
+		userID    models.UserID
+		balance   models.Balance
 		amount    int
-		expect    int
+		expect    models.Balance
 		expectErr error
 	}{
 		{
-			userID:    "user01",
+			name:      "test1",
+			userID:    123,
 			balance:   0,
 			amount:    10,
 			expect:    10,
 			expectErr: nil,
 		},
 		{
-			userID:    "user01",
+			name:      "test2",
+			userID:    123,
 			balance:   10,
 			amount:    10,
 			expect:    20,
 			expectErr: nil,
 		},
 		{
-			userID:    "user01",
+			name:      "test3",
+			userID:    123,
 			balance:   20,
 			amount:    -20,
 			expect:    0,
 			expectErr: nil,
 		},
 		{
-			userID:    "user02",
+			name:      "test4",
+			userID:    112,
 			amount:    0,
 			expect:    0,
 			expectErr: ErrWalletNotFound,
@@ -112,10 +121,10 @@ func TestAdd(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.userID, func(t *testing.T) {
-			uw := NewWallet()
-			_ = uw.Create("user01")
-			got, err := uw.Add(tc.userID, tc.amount+tc.balance)
+		t.Run(tc.name, func(t *testing.T) {
+			uw := NewWalletRepository()
+			_ = uw.Create(123, 0)
+			got, err := uw.Change(tc.userID, tc.amount)
 			assert.Equal(t, tc.expect, got)
 			assert.Equal(t, tc.expectErr, err)
 		})
