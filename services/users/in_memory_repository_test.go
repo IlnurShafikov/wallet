@@ -64,7 +64,7 @@ func TestGet(t *testing.T) {
 		{
 			name:      "get wrong user",
 			login:     loginWrongUser,
-			expectErr: fmt.Errorf("this user %s does not exist", loginWrongUser),
+			expectErr: ErrUserNotFound,
 		},
 	}
 
@@ -74,7 +74,7 @@ func TestGet(t *testing.T) {
 			_, _ = nw.Create(loginUser, password)
 			got, err := nw.Get(tc.login)
 			assert.Equal(t, tc.expect, got)
-			assert.Equal(t, tc.expectErr, err)
+			assert.ErrorIs(t, err, tc.expectErr)
 		})
 	}
 }

@@ -5,7 +5,7 @@ type UserID int
 type Balance int
 
 type User struct {
-	UserID   UserID
+	ID       UserID
 	Login    string
 	Password []byte
 }

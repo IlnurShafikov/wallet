@@ -2,13 +2,17 @@ package main
 
 import (
 	"github.com/IlnurShafikov/wallet/configs"
+	"github.com/IlnurShafikov/wallet/services/auth"
+	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/IlnurShafikov/wallet/services/wallet"
 	"github.com/gofiber/fiber/v2"
 	"net/http"
 	"time"
 )
 
-const appName = "APP"
+const (
+	appName = "APP"
+)
 
 func errorHandler(fCtx *fiber.Ctx, err error) error {
 	return fCtx.Status(http.StatusBadRequest).
@@ -21,7 +25,15 @@ func main() {
 		panic(err)
 	}
 
-	userWallet := wallet.NewWalletRepository()
+	err = cfg.Validate()
+	if err != nil {
+		panic(err)
+	}
+
+	userWallet := wallet.NewInMemoryRepository()
+	usersRepository := users.NewInMemoryRepository()
+	hasherPassword := auth.NewBcryptHashing(cfg.Secret)
+
 	fApp := fiber.New(fiber.Config{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
@@ -31,17 +43,12 @@ func main() {
 	})
 
 	_ = wallet.NewHandler(fApp, userWallet)
+	_ = auth.NewAuthorization(fApp, usersRepository, hasherPassword)
+	_ = auth.NewRegistrationHandler(fApp, usersRepository, hasherPassword)
 
 	err = fApp.Listen(cfg.GetServerPort())
 	if err != nil {
 		panic(err)
 	}
-	//http.HandleFunc("/wallet/{UserID}", handler.CreateWallet) // post
-	//fmt.Println("Server work")
-	//http.HandleFunc("/wallet/{UserID}", handler.GetWallet)     // get
-	//http.HandleFunc("/wallet/{UserID}", handler.UpdateBalance) // put
-	//
-	//if err := http.ListenAndServe(":"+strconv.Itoa(cfg.Port), nil); err != nil {
-	//	log.Fatal("Error start server", err)
-	//}
+
 }
