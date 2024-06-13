@@ -45,11 +45,12 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	err = fCtx.Status(fiber.StatusCreated).JSON(response.BalanceResponse{
-		Balance: req.Balance,
-	})
+	err = sendJson(fCtx, req.Balance, fiber.StatusCreated)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
@@ -63,11 +64,12 @@ func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
-		Balance: balance,
-	})
+	err = sendJson(fCtx, balance, fiber.StatusOK)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 
 }
 
@@ -82,16 +84,17 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	newBalance, err := h.wallet.Change(userID, req.Amount)
+	balance, err := h.wallet.Change(userID, req.Amount)
 	if err != nil {
 		return err
 	}
 
-	err = fCtx.Status(fiber.StatusOK).JSON(response.BalanceResponse{
-		Balance: newBalance,
-	})
+	err = sendJson(fCtx, balance, fiber.StatusOK)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 func getUserID(fCtx *fiber.Ctx) (models.UserID, error) {
@@ -101,4 +104,10 @@ func getUserID(fCtx *fiber.Ctx) (models.UserID, error) {
 	}
 
 	return models.UserID(id), nil
+}
+
+func sendJson(fCtx *fiber.Ctx, balance models.Balance, status int) error {
+	return fCtx.Status(status).JSON(response.BalanceResponse{
+		Balance: balance,
+	})
 }

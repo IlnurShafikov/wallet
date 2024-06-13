@@ -26,23 +26,23 @@ type userCreater interface {
 	Create(login string, password []byte) (*models.User, error)
 }
 
-type hasherPassword interface {
+type passwordHasher interface {
 	HashPassword(password string) ([]byte, error)
 }
 
 type RegistrationHandler struct {
 	userCreate userCreater
-	hashed     hasherPassword
+	hasher     passwordHasher
 }
 
 func NewRegistrationHandler(
 	router fiber.Router,
 	userCreate userCreater,
-	hashed hasherPassword,
+	hashed passwordHasher,
 ) *RegistrationHandler {
 	handler := &RegistrationHandler{
 		userCreate: userCreate,
-		hashed:     hashed,
+		hasher:     hashed,
 	}
 
 	router.Post("/registration", handler.Registration)
@@ -60,7 +60,7 @@ func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
 		return ErrWrongRePassword
 	}
 
-	hashPassword, err := c.hashed.HashPassword(req.Password)
+	hashPassword, err := c.hasher.HashPassword(req.Password)
 	if err != nil {
 		return err
 	}
