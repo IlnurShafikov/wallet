@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	ErrWalletNotFound       = errors.New("wallet not found")
-	ErrWalletNotEnoughMoney = errors.New("not enough money on the balance")
-	ErrWalletAlreadyExists  = errors.New("wallet already exists")
+	ErrWalletNotFound           = errors.New("wallet not found")
+	ErrWalletNotEnoughMoney     = errors.New("not enough money on the balance")
+	ErrWalletAlreadyExists      = errors.New("wallet already exists")
+	ErrWalletNotNegativeBalance = errors.New("the balance cannot be negative")
 )
 
 type InMemoryRepository struct {
@@ -35,6 +36,10 @@ func (i *InMemoryRepository) Get(userID models.UserID) (models.Balance, error) {
 
 // Create -  создает кошелек
 func (i *InMemoryRepository) Create(userID models.UserID, balance models.Balance) error {
+	if balance < 0 {
+		return ErrWalletNotNegativeBalance
+	}
+
 	_, exists := i.wallet[userID]
 	if exists {
 		return fmt.Errorf("%w", ErrWalletAlreadyExists)

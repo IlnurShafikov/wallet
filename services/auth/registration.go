@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -33,16 +34,19 @@ type passwordHasher interface {
 type RegistrationHandler struct {
 	userCreate userCreater
 	hasher     passwordHasher
+	log        *zerolog.Logger
 }
 
 func NewRegistrationHandler(
 	router fiber.Router,
 	userCreate userCreater,
 	hashed passwordHasher,
+	logger *zerolog.Logger,
 ) *RegistrationHandler {
 	handler := &RegistrationHandler{
 		userCreate: userCreate,
 		hasher:     hashed,
+		log:        logger,
 	}
 
 	router.Post("/registration", handler.Registration)
@@ -53,22 +57,30 @@ func NewRegistrationHandler(
 func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
 	req := CreateUserRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
+		c.log.Err(err).Msg("error read body")
 		return err
 	}
 
 	if req.Password != req.RePassword {
+		c.log.Err(ErrWrongRePassword).Msg("password not equal")
 		return ErrWrongRePassword
 	}
 
 	hashPassword, err := c.hasher.HashPassword(req.Password)
 	if err != nil {
+		c.log.Err(err).Msg("hashing password failed")
 		return err
 	}
 
 	user, err := c.userCreate.Create(req.Login, hashPassword)
 	if err != nil {
+		c.log.Err(err).Msg("registration failed")
 		return err
 	}
+
+	c.log.Info().
+		Int("userID", int(user.ID)).
+		Msg("registration successful")
 
 	err = fCtx.Status(fiber.StatusCreated).JSON(CreateUserResponse{
 		Login:  req.Login,

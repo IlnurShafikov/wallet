@@ -6,7 +6,9 @@ import (
 	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/IlnurShafikov/wallet/services/wallet"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -20,6 +22,12 @@ func errorHandler(fCtx *fiber.Ctx, err error) error {
 }
 
 func main() {
+	zerolog.TimeFieldFormat = time.RFC3339
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
+		With().
+		Timestamp().
+		Logger()
+
 	cfg, err := configs.Parse()
 	if err != nil {
 		panic(err)
@@ -42,9 +50,9 @@ func main() {
 		AppName:      appName,
 	})
 
-	_ = wallet.NewHandler(fApp, userWallet)
-	_ = auth.NewAuthorization(fApp, usersRepository, hasherPassword)
-	_ = auth.NewRegistrationHandler(fApp, usersRepository, hasherPassword)
+	_ = wallet.NewHandler(fApp, userWallet, &logger)
+	_ = auth.NewAuthorization(fApp, usersRepository, hasherPassword, &logger)
+	_ = auth.NewRegistrationHandler(fApp, usersRepository, hasherPassword, &logger)
 
 	err = fApp.Listen(cfg.GetServerPort())
 	if err != nil {
