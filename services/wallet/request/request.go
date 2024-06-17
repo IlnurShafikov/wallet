@@ -7,5 +7,6 @@ type CreateWallet struct {
 }
 
 type UpdateBalance struct {
-	Amount models.Balance `json:"amount"`
+	Amount models.Amount `json:"amount"`
+	// todo: RequestID uuidV4
 }

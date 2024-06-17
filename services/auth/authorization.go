@@ -54,7 +54,7 @@ func NewAuthorization(
 func (h *AuthorizationHandler) Authorization(fCtx *fiber.Ctx) error {
 	req := loginRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
-		h.log.Err(err).Msg("error read body")
+		h.log.Err(err).Msg("unmarshal failed")
 		return err
 	}
 
@@ -71,11 +71,12 @@ func (h *AuthorizationHandler) Authorization(fCtx *fiber.Ctx) error {
 
 	err = h.hashedVerify.Verify(req.Password, user.Password)
 	if err != nil {
-		h.log.Err(err).Msg("authorization failed")
+		h.log.Warn().Int("userID", int(user.ID)).
+			Msg("compare user password failed")
 		return ErrAuthorizationFailed
 	}
 
-	h.log.Info().
+	h.log.Debug().
 		Int("userID", int(user.ID)).
 		Msg("authorization successful")
 

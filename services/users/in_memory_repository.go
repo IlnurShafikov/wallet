@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
+	"sync"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -11,6 +12,7 @@ var ErrUserNotFound = errors.New("user not found")
 type InMemoryRepository struct {
 	users  map[string]models.User
 	lastID models.UserID
+	mu     sync.Mutex
 }
 
 func NewInMemoryRepository() *InMemoryRepository {
@@ -26,6 +28,9 @@ func (i *InMemoryRepository) getUser(login string) (models.User, bool) {
 }
 
 func (i *InMemoryRepository) Create(login string, password []byte) (*models.User, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	if _, exist := i.getUser(login); exist {
 		return nil, fmt.Errorf("this user %s exists", login)
 	}
@@ -44,6 +49,9 @@ func (i *InMemoryRepository) Create(login string, password []byte) (*models.User
 }
 
 func (i *InMemoryRepository) Get(login string) (*models.User, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	user, exist := i.getUser(login)
 	if !exist {
 		return nil, ErrUserNotFound

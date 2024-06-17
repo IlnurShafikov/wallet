@@ -41,7 +41,7 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 
 	req := request.CreateWallet{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
-		h.log.Err(err).Msg("invalid request format")
+		h.log.Err(err).Msg("unmarshal failed")
 		return err
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	h.log.Info().
+	h.log.Debug().
 		Int("userID", int(userID)).
 		Msg("wallet created")
 
@@ -78,7 +78,7 @@ func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	h.log.Info().
+	h.log.Debug().
 		Int("userID", int(userID)).
 		Msg("get wallet successful")
 
@@ -101,7 +101,7 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
 		h.log.Err(err).
 			Int("userID", int(userID)).
-			Msg("invalid request format")
+			Msg("unmarshal failed")
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	h.log.Info().
+	h.log.Debug().
 		Int("userID", int(userID)).
 		Msg("change balance successful")
 
@@ -126,7 +126,7 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 func (h *Handler) getUserID(fCtx *fiber.Ctx) (models.UserID, error) {
 	id, err := fCtx.ParamsInt("userID")
 	if err != nil {
-		h.log.Err(err).Msg("error read body")
+		h.log.Err(err).Msg("invalid variable type")
 		return 0, err
 	}
 

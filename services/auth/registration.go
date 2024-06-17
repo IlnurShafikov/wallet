@@ -57,12 +57,12 @@ func NewRegistrationHandler(
 func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
 	req := CreateUserRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
-		c.log.Err(err).Msg("error read body")
+		c.log.Err(err).Msg("unmarshal failed")
 		return err
 	}
 
 	if req.Password != req.RePassword {
-		c.log.Err(ErrWrongRePassword).Msg("password not equal")
+		c.log.Warn().Msg("password not equal")
 		return ErrWrongRePassword
 	}
 
@@ -78,7 +78,7 @@ func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	c.log.Info().
+	c.log.Debug().
 		Int("userID", int(user.ID)).
 		Msg("registration successful")
 

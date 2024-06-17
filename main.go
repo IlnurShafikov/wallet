@@ -22,12 +22,6 @@ func errorHandler(fCtx *fiber.Ctx, err error) error {
 }
 
 func main() {
-	zerolog.TimeFieldFormat = time.RFC3339
-	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
-		With().
-		Timestamp().
-		Logger()
-
 	cfg, err := configs.Parse()
 	if err != nil {
 		panic(err)
@@ -37,6 +31,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	loggerLevelStr := cfg.LogLevel
+	loggerLevel, err := zerolog.ParseLevel(loggerLevelStr)
+	if err != nil {
+		loggerLevel = zerolog.InfoLevel
+	}
+
+	zerolog.TimeFieldFormat = time.RFC3339
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339}).
+		With().
+		Timestamp().
+		Logger().
+		Level(loggerLevel)
 
 	userWallet := wallet.NewInMemoryRepository()
 	usersRepository := users.NewInMemoryRepository()
