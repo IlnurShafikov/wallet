@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Port   int    `env:"PORT" envDefault:"8080"`
-	Secret string `env:"SECRET"`
+	Port     int    `env:"PORT" envDefault:"8080"`
+	Secret   string `env:"SECRET"`
+	LogLevel string `env:"LOG_LEVEL"`
 }
 
 func (c Config) Validate() error {

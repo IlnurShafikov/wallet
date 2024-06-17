@@ -4,6 +4,8 @@ type UserID int
 
 type Balance int
 
+type Amount int
+
 type User struct {
 	ID       UserID
 	Login    string
