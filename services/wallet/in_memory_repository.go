@@ -1,8 +1,8 @@
 package wallet
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 	"sync"
 )
@@ -15,8 +15,8 @@ var (
 )
 
 type InMemoryRepository struct {
-	wallet map[models.UserID]models.Balance
 	mu     sync.Mutex
+	wallet map[models.UserID]models.Balance
 }
 
 // NewInMemoryRepository - создание нового экземпляра кошелька в оп
@@ -27,7 +27,7 @@ func NewInMemoryRepository() *InMemoryRepository {
 }
 
 // Get - Возвращает информацию из кошелька
-func (i *InMemoryRepository) Get(userID models.UserID) (models.Balance, error) {
+func (i *InMemoryRepository) Get(_ context.Context, userID models.UserID) (models.Balance, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -40,7 +40,11 @@ func (i *InMemoryRepository) Get(userID models.UserID) (models.Balance, error) {
 }
 
 // Create -  создает кошелек
-func (i *InMemoryRepository) Create(userID models.UserID, balance models.Balance) error {
+func (i *InMemoryRepository) Create(
+	_ context.Context,
+	userID models.UserID,
+	balance models.Balance,
+) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -50,17 +54,20 @@ func (i *InMemoryRepository) Create(userID models.UserID, balance models.Balance
 
 	_, exists := i.wallet[userID]
 	if exists {
-		return fmt.Errorf("%w", ErrWalletAlreadyExists)
+		return ErrWalletAlreadyExists
 	}
 
 	i.wallet[userID] = balance
 
 	return nil
-
 }
 
-// Change - Манипуляции с балансом
-func (i *InMemoryRepository) Change(userID models.UserID, amount models.Balance) (models.Balance, error) {
+// Update - Манипуляции с балансом
+func (i *InMemoryRepository) Update(
+	_ context.Context,
+	userID models.UserID,
+	amount models.Amount,
+) (models.Balance, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -69,7 +76,7 @@ func (i *InMemoryRepository) Change(userID models.UserID, amount models.Balance)
 		return 0, ErrWalletNotFound
 	}
 
-	balance += amount
+	balance += models.Balance(amount)
 	if balance < 0 {
 		return 0, ErrWalletNotEnoughMoney
 	}

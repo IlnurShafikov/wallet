@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/IlnurShafikov/wallet/configs"
 	"github.com/IlnurShafikov/wallet/services/auth"
+	"github.com/IlnurShafikov/wallet/services/transaction"
 	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/IlnurShafikov/wallet/services/wallet"
 	"github.com/gofiber/fiber/v2"
@@ -45,9 +46,11 @@ func main() {
 		Logger().
 		Level(loggerLevel)
 
-	userWallet := wallet.NewInMemoryRepository()
+	walletTransaction := transaction.NewInMemoryRepository()
 	usersRepository := users.NewInMemoryRepository()
 	hasherPassword := auth.NewBcryptHashing(cfg.Secret)
+	userWallet := wallet.NewInMemoryRepository()
+	walletTR := wallet.NewWallet(userWallet, walletTransaction)
 
 	fApp := fiber.New(fiber.Config{
 		ReadTimeout:  5 * time.Second,
@@ -57,9 +60,10 @@ func main() {
 		AppName:      appName,
 	})
 
-	_ = wallet.NewHandler(fApp, userWallet, &logger)
+	_ = wallet.NewHandler(fApp, walletTR, &logger)
 	_ = auth.NewAuthorization(fApp, usersRepository, hasherPassword, &logger)
 	_ = auth.NewRegistrationHandler(fApp, usersRepository, hasherPassword, &logger)
+	_ = transaction.NewHandler(fApp, walletTransaction, &logger)
 
 	err = fApp.Listen(cfg.GetServerPort())
 	if err != nil {

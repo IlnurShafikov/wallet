@@ -1,5 +1,14 @@
 package models
 
+import (
+	"github.com/gofrs/uuid"
+	"time"
+)
+
+type RoundID = uuid.UUID
+
+type TransactionID = uuid.UUID
+
 type UserID int
 
 type Balance int
@@ -15,4 +24,21 @@ type User struct {
 type Wallet struct {
 	UserID  UserID  `json:"user_id"`
 	Balance Balance `json:"balance"`
+}
+
+// Transaction - это данные по ставке игрока
+// либо по выигрышу
+type Transaction struct {
+	Amount        Amount        `json:"amount"`
+	TransactionID TransactionID `json:"transaction_id"`
+	// Время когда был создан запрос
+	Created time.Time `json:"created"`
+}
+
+type Round struct {
+	UserID   UserID       `json:"user_id"`
+	Bet      Transaction  `json:"bet"`
+	Win      *Transaction `json:"win,omitempty"`
+	Finished bool         `json:"finished"`
+	Refunded bool         `json:"refunded"`
 }

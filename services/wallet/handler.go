@@ -10,13 +10,13 @@ import (
 )
 
 type Handler struct {
-	wallet *InMemoryRepository
+	wallet *Wallet
 	log    *zerolog.Logger
 }
 
 func NewHandler(
 	router fiber.Router,
-	wallet *InMemoryRepository,
+	wallet *Wallet,
 	logger *zerolog.Logger,
 ) *Handler {
 	h := &Handler{
@@ -24,16 +24,16 @@ func NewHandler(
 		log:    logger,
 	}
 
-	group := router.Group("/wallet")
-
-	group.Post("/:userID", h.CreateWallet)
-	group.Get("/:userID", h.GetWallet)
-	group.Put("/:userID", h.UpdateBalance)
+	walletGroup := router.Group("/wallet")
+	walletGroup.Post("/:userID", h.createWallet)
+	walletGroup.Get("/:userID", h.getBalance)
+	walletGroup.Put("/:userID", h.changeBalance)
+	walletGroup.Post("refund/:userID", h.refundTransaction)
 
 	return h
 }
 
-func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
+func (h *Handler) createWallet(fCtx *fiber.Ctx) error {
 	userID, err := h.getUserID(fCtx)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	err = h.wallet.Create(userID, req.Balance)
+	_, err = h.wallet.Create(fCtx.Context(), userID, req.Balance)
 	if err != nil {
 		h.log.Err(err).
 			Int("userID", int(userID)).
@@ -66,13 +66,13 @@ func (h *Handler) CreateWallet(fCtx *fiber.Ctx) error {
 	return nil
 }
 
-func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
+func (h *Handler) getBalance(fCtx *fiber.Ctx) error {
 	userID, err := h.getUserID(fCtx)
 	if err != nil {
 		return err
 	}
 
-	balance, err := h.wallet.Get(userID)
+	balance, err := h.wallet.Get(fCtx.Context(), userID)
 	if err != nil {
 		h.log.Err(err).Msg("wallet not found")
 		return err
@@ -91,7 +91,7 @@ func (h *Handler) GetWallet(fCtx *fiber.Ctx) error {
 
 }
 
-func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
+func (h *Handler) changeBalance(fCtx *fiber.Ctx) error {
 	userID, err := h.getUserID(fCtx)
 	if err != nil {
 		return err
@@ -105,7 +105,7 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	balance, err := h.wallet.Change(userID, req.Amount)
+	balance, err := h.wallet.Change(fCtx.Context(), userID, req)
 	if err != nil {
 		h.log.Err(err).Msg("wallet not found")
 		return err
@@ -113,6 +113,7 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 
 	h.log.Debug().
 		Int("userID", int(userID)).
+		Str("transaction_id", req.TransactionID.String()).
 		Msg("change balance successful")
 
 	err = h.sendJson(fCtx, balance, fiber.StatusOK)
@@ -121,6 +122,42 @@ func (h *Handler) UpdateBalance(fCtx *fiber.Ctx) error {
 	}
 
 	return nil
+}
+
+func (h *Handler) refundTransaction(fCtx *fiber.Ctx) error {
+	userID, err := h.getUserID(fCtx)
+	if err != nil {
+		return err
+	}
+
+	req := request.RefundTransaction{}
+	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
+		h.log.Err(err).
+			Int("userID", int(userID)).
+			Msg("unmarshal failed")
+		return err
+	}
+
+	balance, err := h.wallet.Refund(fCtx.Context(), userID, req)
+	if err != nil {
+		h.log.Err(err).
+			Int("userID", int(userID)).
+			Msg("refund failed")
+		return err
+	}
+
+	h.log.Debug().
+		Int("userID", int(userID)).
+		Str("transaction_id", req.RoundID.String()).
+		Msg("refund successful")
+
+	err = h.sendJson(fCtx, balance, fiber.StatusOK)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
 
 func (h *Handler) getUserID(fCtx *fiber.Ctx) (models.UserID, error) {

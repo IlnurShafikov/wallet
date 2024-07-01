@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"context"
 	"github.com/IlnurShafikov/wallet/models"
 	"testing"
 
@@ -15,12 +16,14 @@ func TestCreate(t *testing.T) {
 		balance models.Balance
 		before  func(uw *InMemoryRepository)
 		expect  error
+		ctx     context.Context
 	}{
 		{
 			name:    "создание нового кошелька",
 			expect:  nil,
 			balance: 0,
 			before:  func(uw *InMemoryRepository) {},
+			ctx:     nil,
 		},
 		{
 			name:    "создание существующего кошелька",
@@ -29,6 +32,7 @@ func TestCreate(t *testing.T) {
 				uw.wallet[userID] = 0
 			},
 			expect: ErrWalletAlreadyExists,
+			ctx:    nil,
 		},
 	}
 
@@ -36,7 +40,7 @@ func TestCreate(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			uw := NewInMemoryRepository()
 			testCase.before(uw)
-			err := uw.Create(userID, testCase.balance)
+			err := uw.Create(testCase.ctx, userID, testCase.balance)
 			assert.ErrorIs(t, err, testCase.expect)
 		})
 	}
@@ -52,11 +56,13 @@ func TestGet(t *testing.T) {
 		expect    models.Balance
 		expectErr error
 		before    func(uw *InMemoryRepository)
+		ctx       context.Context
 	}{
 		{
 			name:      "Получаем существующий кошелек",
 			expect:    balance,
 			expectErr: nil,
+			ctx:       nil,
 			before: func(uw *InMemoryRepository) {
 				uw.wallet[userID] = balance
 			},
@@ -65,6 +71,7 @@ func TestGet(t *testing.T) {
 			name:      "Получаем не существующий кошелек",
 			expect:    0,
 			expectErr: ErrWalletNotFound,
+			ctx:       nil,
 			before: func(_ *InMemoryRepository) {
 
 			},
@@ -75,7 +82,7 @@ func TestGet(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			uw := NewInMemoryRepository()
 			tc.before(uw)
-			got, err := uw.Get(userID)
+			got, err := uw.Get(tc.ctx, userID)
 			assert.Equal(t, tc.expect, got)
 			assert.ErrorIs(t, err, tc.expectErr)
 		})
@@ -90,16 +97,18 @@ func TestAdd(t *testing.T) {
 	)
 	tests := []struct {
 		name      string
-		amount    models.Balance
+		amount    models.Amount
 		before    func(uw *InMemoryRepository)
 		expect    models.Balance
 		expectErr error
+		ctx       context.Context
 	}{
 		{
 			name:      "test1",
 			amount:    10,
 			expect:    10,
 			expectErr: nil,
+			ctx:       nil,
 			before: func(uw *InMemoryRepository) {
 				uw.wallet[userID] = 0
 			},
@@ -109,6 +118,7 @@ func TestAdd(t *testing.T) {
 			amount:    10,
 			expect:    20,
 			expectErr: nil,
+			ctx:       nil,
 			before: func(uw *InMemoryRepository) {
 				uw.wallet[userID] = balance
 			},
@@ -118,6 +128,7 @@ func TestAdd(t *testing.T) {
 			amount:    -20,
 			expect:    0,
 			expectErr: nil,
+			ctx:       nil,
 			before: func(uw *InMemoryRepository) {
 				uw.wallet[userID] = 20
 			},
@@ -126,6 +137,7 @@ func TestAdd(t *testing.T) {
 			name:      "test4",
 			amount:    0,
 			expect:    0,
+			ctx:       nil,
 			expectErr: ErrWalletNotFound,
 			before: func(uw *InMemoryRepository) {
 				uw.wallet[133] = 0
@@ -137,7 +149,7 @@ func TestAdd(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			uw := NewInMemoryRepository()
 			tc.before(uw)
-			got, err := uw.Change(userID, tc.amount)
+			got, err := uw.Update(tc.ctx, userID, tc.amount)
 			assert.Equal(t, tc.expect, got)
 			assert.ErrorIs(t, err, tc.expectErr)
 		})
