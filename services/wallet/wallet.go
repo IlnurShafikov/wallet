@@ -7,6 +7,7 @@ import (
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/IlnurShafikov/wallet/services/transaction"
 	"github.com/IlnurShafikov/wallet/services/wallet/request"
+	"github.com/rs/zerolog"
 	"time"
 )
 
@@ -26,10 +27,19 @@ type transactionRepository interface {
 type Wallet struct {
 	walletRepository walletRepository
 	trRepository     transactionRepository
+	log              *zerolog.Logger
 }
 
-func NewWallet(walletRepository walletRepository, trRepository transactionRepository) *Wallet {
-	return &Wallet{walletRepository: walletRepository, trRepository: trRepository}
+func NewWallet(
+	walletRepository walletRepository,
+	trRepository transactionRepository,
+	logger *zerolog.Logger,
+) *Wallet {
+	return &Wallet{
+		walletRepository: walletRepository,
+		trRepository:     trRepository,
+		log:              logger,
+	}
 }
 
 func (w *Wallet) Get(
@@ -77,29 +87,17 @@ func (w *Wallet) Refund(
 		return 0, transaction.ErrNotRefund
 	}
 
-	fmt.Println(round.Refunded)
-
 	amount := round.Bet.Amount
-	betTransaction := round.Bet
-
-	if amount < 0 {
-		amount = -amount
-	}
+	amount *= -1
 
 	balance, err := w.Update(ctx, userID, amount)
 	if err != nil {
 		return 0, err
 	}
 
-	updateRound := models.Round{
-		UserID:   userID,
-		Bet:      betTransaction,
-		Win:      nil,
-		Finished: true,
-		Refunded: true,
-	}
+	round.Refunded = true
 
-	err = w.trRepository.UpdateRound(ctx, req.RoundID, updateRound)
+	err = w.trRepository.UpdateRound(ctx, req.RoundID, *round)
 	if err != nil {
 		return 0, err
 	}
