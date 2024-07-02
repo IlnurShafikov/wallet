@@ -19,7 +19,11 @@ const (
 
 func errorHandler(fCtx *fiber.Ctx, err error) error {
 	return fCtx.Status(http.StatusBadRequest).
-		Send([]byte(`{"message":"` + err.Error() + `"}`))
+		JSON(struct {
+			Message string `json:"message"`
+		}{
+			Message: err.Error(),
+		})
 }
 
 func main() {
@@ -50,7 +54,7 @@ func main() {
 	usersRepository := users.NewInMemoryRepository()
 	hasherPassword := auth.NewBcryptHashing(cfg.Secret)
 	userWallet := wallet.NewInMemoryRepository()
-	walletTR := wallet.NewWallet(userWallet, walletTransaction)
+	walletTR := wallet.NewWallet(userWallet, walletTransaction, &logger)
 
 	fApp := fiber.New(fiber.Config{
 		ReadTimeout:  5 * time.Second,

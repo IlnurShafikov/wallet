@@ -5,14 +5,14 @@ import (
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 )
 
 func TestGetRound(t *testing.T) {
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	round := models.Round{
 		UserID:   123,
@@ -59,20 +59,16 @@ func TestGetRound(t *testing.T) {
 
 func TestGetTransaction(t *testing.T) {
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174001")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	noTransaction, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174006")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	betID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174002")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	winID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174003")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	bet := &models.Transaction{
 		Amount:        -10,
@@ -162,20 +158,15 @@ func TestGetTransaction(t *testing.T) {
 
 func TestSetWin(t *testing.T) {
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174001")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	noTransaction, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174006")
-	if err != nil {
-	}
-
+	require.NoError(t, err)
 	betID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174002")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	winID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174003")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	bet := &models.Transaction{
 		Amount:        -10,
@@ -275,12 +266,10 @@ func TestSetWin(t *testing.T) {
 
 func TestCreateBet(t *testing.T) {
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	betID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174002")
-	if err != nil {
-	}
+	require.NoError(t, err)
 
 	bet := &models.Transaction{
 		Amount:        -10,
