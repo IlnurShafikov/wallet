@@ -102,8 +102,6 @@ func (w *Wallet) Refund(
 		return 0, err
 	}
 
-	fmt.Println(round.Refunded, round.Finished)
-
 	return balance, nil
 }
 
@@ -128,7 +126,7 @@ func (w *Wallet) createBet(
 ) (models.Balance, error) {
 	_, err := w.trRepository.GetRound(ctx, req.RoundID)
 	if err == nil {
-		return 0, errors.New("roundID exist")
+		return 0, transaction.ErrRoundIdAlreadyExists
 	}
 
 	if !errors.Is(err, transaction.ErrRoundNotFound) {
@@ -171,7 +169,7 @@ func (w *Wallet) setWin(
 	}
 
 	if round.Bet.Amount == 0 {
-		return 0, err
+		return 0, transaction.ErrRoundNotFound
 	}
 
 	if round.Finished == true {
