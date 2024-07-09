@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"context"
+	"errors"
 	"github.com/IlnurShafikov/wallet/mocks"
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/IlnurShafikov/wallet/services/transaction"
@@ -16,10 +17,8 @@ import (
 )
 
 type mock struct {
-	wallet     *Wallet
 	walletRepo *mocks.MockwalletRepository
 	mockTrRepo *mocks.MocktransactionRepository
-	ctrl       *gomock.Controller
 }
 
 func newMock(ctrl *gomock.Controller) *mock {
@@ -65,24 +64,6 @@ func (m *mock) updateRound(ctx context.Context, roundID models.RoundID, round mo
 	return func(expErr error) *gomock.Call {
 		return m.mockTrRepo.EXPECT().
 			UpdateRound(ctx, roundID, round).Times(1).Return(expErr)
-	}
-}
-
-func (m *mock) createBetWallet(ctx context.Context, userID models.UserID, req request.UpdateBalance) func(
-	balance models.Balance, err error,
-) *gomock.Call {
-	return func(expBalance models.Balance, expErr error) *gomock.Call {
-		return m.mockTrRepo.EXPECT().
-			CreateBet(ctx, userID, req).Times(1).Return(expBalance, expErr)
-	}
-}
-
-func (m *mock) setWinWallet(ctx context.Context, userID models.UserID, req request.UpdateBalance) func(
-	balance models.Balance, err error,
-) *gomock.Call {
-	return func(expBalance models.Balance, expErr error) *gomock.Call {
-		return m.mockTrRepo.EXPECT().
-			SetWin(ctx, userID, req).Times(1).Return(expBalance, expErr)
 	}
 }
 
@@ -160,6 +141,9 @@ func TestWallet_Refund(t *testing.T) {
 		amount  = 100
 		balance = 1000
 	)
+	var (
+		errRoundNotFound = errors.New("round not found")
+	)
 
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
 	require.NoError(t, err)
@@ -184,9 +168,9 @@ func TestWallet_Refund(t *testing.T) {
 		{
 			name: "round not found",
 			before: func(m *mock) {
-				m.getRound(ctx, models.RoundID(roundID))(nil, transaction.ErrRoundNotFound)
+				m.getRound(ctx, models.RoundID(roundID))(nil, errRoundNotFound)
 			},
-			expectErr: transaction.ErrRoundNotFound,
+			expectErr: errRoundNotFound,
 		}, {
 			name: "wallet not found",
 			before: func(m *mock) {
@@ -210,7 +194,30 @@ func TestWallet_Refund(t *testing.T) {
 			expectBalance: 0,
 			expectErr:     ErrWalletNotFound,
 		}, {
-			name: "refund already exists",
+			name: "wallet not money",
+			before: func(m *mock) {
+				round := models.Round{
+					UserID: userID,
+					Bet: models.Transaction{
+						Amount:        -amount,
+						TransactionID: models.TransactionID(betID),
+						Created:       time.Now(),
+					},
+					Win:      nil,
+					Finished: false,
+					Refunded: false,
+				}
+
+				gomock.InOrder(
+					m.getRound(ctx, models.RoundID(roundID))(&round, nil),
+					m.update(ctx, userID, amount)(0, ErrWalletNotEnoughMoney),
+				)
+			},
+			expectBalance: 0,
+			expectErr:     ErrWalletNotEnoughMoney,
+		},
+		{
+			name: "refund exists",
 			before: func(m *mock) {
 				round := models.Round{
 					UserID: userID,
@@ -220,7 +227,7 @@ func TestWallet_Refund(t *testing.T) {
 						Created:       time.Now(),
 					},
 					Win: &models.Transaction{
-						Amount:        -amount,
+						Amount:        amount,
 						TransactionID: models.TransactionID(betID),
 						Created:       time.Now(),
 					},
@@ -232,7 +239,7 @@ func TestWallet_Refund(t *testing.T) {
 				)
 			},
 			expectBalance: 0,
-			expectErr:     transaction.ErrNotRefund,
+			expectErr:     ErrNotRefund,
 		}, {
 			name: "refund successful",
 			before: func(m *mock) {
@@ -268,6 +275,63 @@ func TestWallet_Refund(t *testing.T) {
 			},
 			expectBalance: balance,
 			expectErr:     nil,
+		}, {
+			name: "update round failed",
+			before: func(m *mock) {
+				round := models.Round{
+					UserID: userID,
+					Bet: models.Transaction{
+						Amount:        -amount,
+						TransactionID: models.TransactionID(betID),
+						Created:       time.Now(),
+					},
+					Win:      nil,
+					Finished: false,
+					Refunded: false,
+				}
+
+				roundRef := models.Round{
+					UserID: userID,
+					Bet: models.Transaction{
+						Amount:        -amount,
+						TransactionID: models.TransactionID(betID),
+						Created:       time.Now(),
+					},
+					Win:      nil,
+					Finished: false,
+					Refunded: true,
+				}
+
+				gomock.InOrder(
+					m.getRound(ctx, models.RoundID(roundID))(&round, nil),
+					m.update(ctx, userID, amount)(balance, err),
+					m.updateRound(ctx, models.RoundID(roundID), roundRef)(ErrUpdateRoundFailed),
+				)
+			},
+			expectBalance: 0,
+			expectErr:     ErrUpdateRoundFailed,
+		},
+		{
+			name: "refund successful",
+			before: func(m *mock) {
+				roundRef := models.Round{
+					UserID: userID,
+					Bet: models.Transaction{
+						Amount:        -amount,
+						TransactionID: models.TransactionID(betID),
+						Created:       time.Now(),
+					},
+					Win:      nil,
+					Finished: false,
+					Refunded: true,
+				}
+
+				gomock.InOrder(
+					m.getRound(ctx, models.RoundID(roundID))(&roundRef, nil),
+				)
+			},
+			expectBalance: 0,
+			expectErr:     ErrRefundAlreadyExists,
 		},
 	}
 
@@ -282,12 +346,9 @@ func TestWallet_Refund(t *testing.T) {
 			srv := NewWallet(m.walletRepo, m.mockTrRepo, &log)
 			balance, err := srv.Refund(ctx, userID, req)
 
-			if tt.expectErr != nil {
-				assert.ErrorIs(t, err, tt.expectErr)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.ErrorIs(t, tt.expectErr, err)
 			assert.Equal(t, tt.expectBalance, balance)
+
 		})
 	}
 }
@@ -306,6 +367,8 @@ func TestWallet_CreateBet(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 
+	errGetFailed := errors.New("get transaction failed")
+
 	req := request.UpdateBalance{
 		Amount:        amount,
 		RoundID:       models.RoundID(roundID),
@@ -320,6 +383,16 @@ func TestWallet_CreateBet(t *testing.T) {
 		expErr     error
 	}{
 		{
+			name: "refund - update round failed",
+			before: func(m *mock) {
+				gomock.InOrder(
+					m.getRound(ctx, models.RoundID(roundID))(nil, transaction.ErrRoundNotFound),
+					m.update(ctx, userID, amount)(0, ErrWalletNotEnoughMoney),
+				)
+			},
+			expBalance: 0,
+			expErr:     ErrWalletNotEnoughMoney,
+		}, {
 			name: "create bet successful",
 			before: func(m *mock) {
 				roundBet := models.Round{
@@ -343,7 +416,7 @@ func TestWallet_CreateBet(t *testing.T) {
 			expBalance: balance,
 			expErr:     nil,
 		}, {
-			name: "round already exists",
+			name: "create bet transaction failed",
 			before: func(m *mock) {
 				roundBet := models.Round{
 					UserID: userID,
@@ -357,10 +430,32 @@ func TestWallet_CreateBet(t *testing.T) {
 					Refunded: false,
 				}
 
+				gomock.InOrder(
+					m.getRound(ctx, models.RoundID(roundID))(nil, transaction.ErrRoundNotFound),
+					m.update(ctx, userID, amount)(balance, err),
+					m.createBetTr(ctx, req.RoundID, roundBet)(ErrCreateBetFailed),
+				)
+			},
+			expBalance: 0,
+			expErr:     ErrCreateBetFailed,
+		},
+		{
+			name: "round already exists",
+			before: func(m *mock) {
+				roundBet := models.Round{}
+
 				m.getRound(ctx, models.RoundID(roundID))(&roundBet, nil)
 			},
 			expBalance: 0,
-			expErr:     transaction.ErrRoundIdAlreadyExists,
+			expErr:     ErrRoundIDAlready,
+		},
+		{
+			name: "get round transaction failed",
+			before: func(m *mock) {
+				m.getRound(ctx, models.RoundID(roundID))(nil, errGetFailed)
+			},
+			expBalance: 0,
+			expErr:     errGetFailed,
 		},
 	}
 
@@ -387,6 +482,11 @@ func TestWallet_SetWin(t *testing.T) {
 		userID  = 1992
 		balance = 100
 		amount  = -10
+	)
+
+	var (
+		errRoundNotFound           = errors.New("round not found")
+		errSetWinTransactionFailed = errors.New("set win transaction failed")
 	)
 
 	roundID, err := uuid.Parse("123e4567-e89b-12d3-a456-426614174000")
@@ -440,6 +540,13 @@ func TestWallet_SetWin(t *testing.T) {
 			expBalance: balance,
 			expErr:     nil,
 		}, {
+			name: "round not found",
+			before: func(m *mock) {
+				m.getRound(ctx, models.RoundID(roundID))(nil, errRoundNotFound)
+			},
+			expErr: errRoundNotFound,
+		},
+		{
 			name: "win already exists",
 			before: func(m *mock) {
 				winRound := models.Transaction{
@@ -462,7 +569,7 @@ func TestWallet_SetWin(t *testing.T) {
 				m.getRound(ctx, req.RoundID)(&roundBet, nil)
 			},
 			expBalance: 0,
-			expErr:     transaction.ErrTransactionAlreadyExists,
+			expErr:     ErrWinAlreadyExists,
 		}, {
 			name: "round finished",
 			before: func(m *mock) {
@@ -486,32 +593,36 @@ func TestWallet_SetWin(t *testing.T) {
 				m.getRound(ctx, req.RoundID)(&roundBet, nil)
 			},
 			expBalance: 0,
-			expErr:     transaction.ErrRoundFinished,
+			expErr:     ErrRoundFinished,
 		}, {
-			name: "bet amount = 0",
+			name: "set win transaction failed",
 			before: func(m *mock) {
+				roundBet := models.Round{
+					UserID: userID,
+					Bet: models.Transaction{
+						Amount:        req.Amount,
+						TransactionID: req.TransactionID,
+						Created:       time.Now(),
+					},
+					Win:      nil,
+					Finished: req.Finished,
+					Refunded: false,
+				}
+
 				winRound := models.Transaction{
 					Amount:        req.Amount,
 					TransactionID: req.TransactionID,
 					Created:       time.Now(),
 				}
 
-				roundBet := models.Round{
-					UserID: userID,
-					Bet: models.Transaction{
-						Amount:        0,
-						TransactionID: req.TransactionID,
-						Created:       time.Now(),
-					},
-					Win:      &winRound,
-					Finished: false,
-					Refunded: false,
-				}
-
-				m.getRound(ctx, req.RoundID)(&roundBet, nil)
+				gomock.InOrder(
+					m.getRound(ctx, req.RoundID)(&roundBet, nil),
+					m.update(ctx, userID, req.Amount)(balance, nil),
+					m.setWinTr(ctx, req.RoundID, winRound)(errSetWinTransactionFailed),
+				)
 			},
 			expBalance: 0,
-			expErr:     transaction.ErrRoundNotFound,
+			expErr:     errSetWinTransactionFailed,
 		},
 	}
 
@@ -527,7 +638,7 @@ func TestWallet_SetWin(t *testing.T) {
 
 			srv := NewWallet(m.walletRepo, m.mockTrRepo, &log)
 			balance, err := srv.setWin(ctx, userID, req)
-			assert.ErrorIs(t, err, tt.expErr)
+			assert.ErrorIs(t, tt.expErr, err)
 			assert.Equal(t, tt.expBalance, balance)
 		})
 	}

@@ -9,8 +9,6 @@ import (
 
 var (
 	ErrRoundNotFound            = errors.New("round not found")
-	ErrRefundAlreadyExists      = errors.New("refund already exists")
-	ErrNotRefund                = errors.New("no way to roll back transactions")
 	ErrRoundIdAlreadyExists     = errors.New("round_id already exists")
 	ErrTransactionNotFound      = errors.New("transaction_id not found")
 	ErrTransactionAlreadyExists = errors.New("transaction_id already exists")

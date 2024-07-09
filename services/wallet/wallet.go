@@ -24,6 +24,16 @@ type transactionRepository interface {
 	UpdateRound(context.Context, models.RoundID, models.Round) error
 }
 
+var (
+	ErrRefundAlreadyExists = errors.New("refund already exists")
+	ErrNotRefund           = errors.New("no way to roll back transactions")
+	ErrRoundIDAlready      = errors.New("round id already exist")
+	ErrWinAlreadyExists    = errors.New("win already exists")
+	ErrRoundFinished       = errors.New("round finished")
+	ErrUpdateRoundFailed   = errors.New("update round failed")
+	ErrCreateBetFailed     = errors.New("set bet failed")
+)
+
 type Wallet struct {
 	walletRepository walletRepository
 	trRepository     transactionRepository
@@ -76,15 +86,15 @@ func (w *Wallet) Refund(
 ) (models.Balance, error) {
 	round, err := w.trRepository.GetRound(ctx, req.RoundID)
 	if err != nil {
-		return 0, transaction.ErrRoundNotFound
+		return 0, err
 	}
 
 	if round.Refunded == true {
-		return 0, transaction.ErrRefundAlreadyExists
+		return 0, ErrRefundAlreadyExists
 	}
 
 	if round.Win != nil {
-		return 0, transaction.ErrNotRefund
+		return 0, ErrNotRefund
 	}
 
 	amount := round.Bet.Amount
@@ -99,7 +109,7 @@ func (w *Wallet) Refund(
 
 	err = w.trRepository.UpdateRound(ctx, req.RoundID, *round)
 	if err != nil {
-		return 0, err
+		return 0, ErrUpdateRoundFailed
 	}
 
 	return balance, nil
@@ -126,7 +136,7 @@ func (w *Wallet) createBet(
 ) (models.Balance, error) {
 	_, err := w.trRepository.GetRound(ctx, req.RoundID)
 	if err == nil {
-		return 0, transaction.ErrRoundIdAlreadyExists
+		return 0, ErrRoundIDAlready
 	}
 
 	if !errors.Is(err, transaction.ErrRoundNotFound) {
@@ -152,7 +162,7 @@ func (w *Wallet) createBet(
 
 	err = w.trRepository.CreateBet(ctx, req.RoundID, round)
 	if err != nil {
-		return 0, fmt.Errorf("create bet transaction: %w", err)
+		return 0, ErrCreateBetFailed
 	}
 
 	return balance, nil
@@ -168,16 +178,12 @@ func (w *Wallet) setWin(
 		return 0, err
 	}
 
-	if round.Bet.Amount == 0 {
-		return 0, transaction.ErrRoundNotFound
-	}
-
 	if round.Finished == true {
-		return 0, transaction.ErrRoundFinished
+		return 0, ErrRoundFinished
 	}
 
 	if round.Win != nil {
-		return 0, transaction.ErrTransactionAlreadyExists
+		return 0, ErrWinAlreadyExists
 	}
 
 	balance, err := w.Update(ctx, userID, req.Amount)
