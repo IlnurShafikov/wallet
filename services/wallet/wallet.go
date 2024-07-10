@@ -31,7 +31,6 @@ var (
 	ErrWinAlreadyExists    = errors.New("win already exists")
 	ErrRoundFinished       = errors.New("round finished")
 	ErrUpdateRoundFailed   = errors.New("update round failed")
-	ErrCreateBetFailed     = errors.New("set bet failed")
 )
 
 type Wallet struct {
@@ -162,7 +161,7 @@ func (w *Wallet) createBet(
 
 	err = w.trRepository.CreateBet(ctx, req.RoundID, round)
 	if err != nil {
-		return 0, ErrCreateBetFailed
+		return 0, err
 	}
 
 	return balance, nil
