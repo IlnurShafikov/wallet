@@ -14,11 +14,11 @@ type Handler struct {
 	log    *zerolog.Logger
 }
 
-func NewHandler(
+func RunWalletHandler(
 	router fiber.Router,
 	wallet *Wallet,
 	logger *zerolog.Logger,
-) *Handler {
+) {
 	h := &Handler{
 		wallet: wallet,
 		log:    logger,
@@ -29,8 +29,6 @@ func NewHandler(
 	walletGroup.Get("/:userID", h.getBalance)
 	walletGroup.Put("/:userID", h.changeBalance)
 	walletGroup.Post("refund/:userID", h.refundTransaction)
-
-	return h
 }
 
 func (h *Handler) createWallet(fCtx *fiber.Ctx) error {

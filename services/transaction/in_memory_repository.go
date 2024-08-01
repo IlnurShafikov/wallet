@@ -13,6 +13,7 @@ var (
 	ErrTransactionNotFound      = errors.New("transaction_id not found")
 	ErrTransactionAlreadyExists = errors.New("transaction_id already exists")
 	ErrRoundFinished            = errors.New("round is finished")
+	ErrRoundRefundAlreadyExists = errors.New("round is refunded")
 )
 
 type InMemoryRepository struct {
@@ -69,6 +70,10 @@ func (i *InMemoryRepository) SetWin(_ context.Context, roundID models.RoundID, w
 		return ErrRoundFinished
 	}
 
+	if round.Refunded == true {
+		return ErrRoundRefundAlreadyExists
+	}
+
 	i.transactions[roundID] = models.Round{
 		UserID: round.UserID,
 		Bet:    round.Bet,
@@ -82,33 +87,6 @@ func (i *InMemoryRepository) SetWin(_ context.Context, roundID models.RoundID, w
 	}
 
 	return nil
-}
-
-func (i *InMemoryRepository) GetTransactionID(_ context.Context, roundID models.RoundID, transactionID models.TransactionID) (*models.Transaction, error) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-
-	round, exists := i.transactions[roundID]
-	if !exists {
-		return nil, ErrRoundNotFound
-	}
-
-	var transaction *models.Transaction
-
-	if transactionID == round.Bet.TransactionID {
-		transaction = &round.Bet
-	} else if transactionID == round.Win.TransactionID {
-		if round.Win != nil {
-			transaction = round.Win
-		} else {
-			return nil, ErrTransactionNotFound
-		}
-	} else {
-		return nil, ErrTransactionNotFound
-	}
-
-	return transaction, nil
-
 }
 
 func (i *InMemoryRepository) UpdateRound(_ context.Context, roundID models.RoundID, updateRound models.Round) error {

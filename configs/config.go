@@ -7,9 +7,16 @@ import (
 )
 
 type Config struct {
-	Port     int    `env:"PORT" envDefault:"8080"`
-	Secret   string `env:"SECRET"`
-	LogLevel string `env:"LOG_LEVEL"`
+	Redis       Redis  `envPrefix:"REDIS_"`
+	Port        int    `env:"PORT" envDefault:"8080"`
+	Secret      string `env:"SECRET"`
+	LogLevel    string `env:"LOG_LEVEL"`
+	Local       bool   `env:"local"`
+	StorageType string `env:"STORAGE_TYPE"`
+}
+
+type Redis struct {
+	Address string `env:"ADDRESS" envDefault:"localhost:6379" `
 }
 
 func (c Config) Validate() error {

@@ -1,10 +1,14 @@
-package auth
+package security
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"golang.org/x/crypto/bcrypt"
+)
 
 type BcryptHashing struct {
 	secret string
 }
+
+var _ = Password(&BcryptHashing{})
 
 func NewBcryptHashing(secret string) *BcryptHashing {
 	return &BcryptHashing{secret: secret}
@@ -25,7 +29,7 @@ func (p *BcryptHashing) Verify(password string, hashPassword []byte) error {
 	passwordWithSecret := password + p.secret
 	err := bcrypt.CompareHashAndPassword(hashPassword, []byte(passwordWithSecret))
 	if err != nil {
-		return ErrWrongRePassword
+		return err
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/gofrs/uuid"
+	"strconv"
 	"time"
 )
 
@@ -10,6 +11,10 @@ type RoundID = uuid.UUID
 type TransactionID = uuid.UUID
 
 type UserID int
+
+func (u UserID) String() string {
+	return strconv.Itoa(int(u))
+}
 
 type Balance int
 

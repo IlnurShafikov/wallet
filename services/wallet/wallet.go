@@ -11,17 +11,10 @@ import (
 	"time"
 )
 
-type walletRepository interface {
+type Repository interface {
 	Create(context.Context, models.UserID, models.Balance) error
 	Get(context.Context, models.UserID) (models.Balance, error)
 	Update(context.Context, models.UserID, models.Amount) (models.Balance, error)
-}
-
-type transactionRepository interface {
-	GetRound(context.Context, models.RoundID) (*models.Round, error)
-	CreateBet(context.Context, models.RoundID, models.Round) error
-	SetWin(context.Context, models.RoundID, models.Transaction) error
-	UpdateRound(context.Context, models.RoundID, models.Round) error
 }
 
 var (
@@ -34,14 +27,14 @@ var (
 )
 
 type Wallet struct {
-	walletRepository walletRepository
-	trRepository     transactionRepository
+	walletRepository Repository
+	trRepository     transaction.Repository
 	log              *zerolog.Logger
 }
 
 func NewWallet(
-	walletRepository walletRepository,
-	trRepository transactionRepository,
+	walletRepository Repository,
+	trRepository transaction.Repository,
 	logger *zerolog.Logger,
 ) *Wallet {
 	return &Wallet{

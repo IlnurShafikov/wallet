@@ -1,9 +1,11 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/IlnurShafikov/wallet/models"
+	"github.com/IlnurShafikov/wallet/services/auth/security"
 	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
@@ -11,17 +13,9 @@ import (
 
 var ErrAuthorizationFailed = errors.New("authorization failed")
 
-type usersGetter interface {
-	Get(login string) (*models.User, error)
-}
-
-type hasherPasswordVerify interface {
-	Verify(password string, hashPassword []byte) error
-}
-
 type AuthorizationHandler struct {
-	userRepository usersGetter
-	hashedVerify   hasherPasswordVerify
+	userRepository users.Getter
+	hashedVerify   security.PasswordVerify
 	log            *zerolog.Logger
 }
 
@@ -34,31 +28,31 @@ type loginResponse struct {
 	UserID models.UserID `json:"user_id"`
 }
 
-func NewAuthorization(
+func RunAuthorizationHandler(
 	router fiber.Router,
-	userRepository usersGetter,
-	hashed hasherPasswordVerify,
+	usersGetter users.Getter,
+	hashed security.PasswordVerify,
 	logger *zerolog.Logger,
-) *AuthorizationHandler {
+) {
 	auth := &AuthorizationHandler{
-		userRepository: userRepository,
+		userRepository: usersGetter,
 		hashedVerify:   hashed,
 		log:            logger,
 	}
 
-	router.Post("/login", auth.Authorization)
-
-	return auth
+	router.Post("/login", auth.authorization)
 }
 
-func (h *AuthorizationHandler) Authorization(fCtx *fiber.Ctx) error {
+func (h *AuthorizationHandler) authorization(fCtx *fiber.Ctx) error {
 	req := loginRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
 		h.log.Err(err).Msg("unmarshal failed")
 		return err
 	}
 
-	user, err := h.userRepository.Get(req.Login)
+	ctx := context.Background()
+
+	user, err := h.userRepository.Get(ctx, req.Login)
 	if err != nil {
 		h.log.Err(err).Msg("get user failed")
 
@@ -71,8 +65,9 @@ func (h *AuthorizationHandler) Authorization(fCtx *fiber.Ctx) error {
 
 	err = h.hashedVerify.Verify(req.Password, user.Password)
 	if err != nil {
-		h.log.Warn().Int("userID", int(user.ID)).
-			Msg("compare user password failed")
+		h.log.Warn().
+			Int("userID", int(user.ID)).Err(err).
+			Msg("verify user password failed")
 		return ErrAuthorizationFailed
 	}
 
