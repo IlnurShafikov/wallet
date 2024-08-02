@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/configs"
-	"github.com/IlnurShafikov/wallet/services/auth"
-	"github.com/IlnurShafikov/wallet/services/auth/security"
+	"github.com/IlnurShafikov/wallet/modules/users"
+	"github.com/IlnurShafikov/wallet/modules/users/repositories"
+	wallet2 "github.com/IlnurShafikov/wallet/modules/wallet"
+	"github.com/IlnurShafikov/wallet/services/security"
 	"github.com/IlnurShafikov/wallet/services/transaction"
-	"github.com/IlnurShafikov/wallet/services/users"
-	"github.com/IlnurShafikov/wallet/services/wallet"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
@@ -20,7 +20,7 @@ import (
 
 type components struct {
 	userRepository        users.Repository
-	walletRepository      wallet.Repository
+	walletRepository      wallet2.Repository
 	transactionRepository transaction.Repository
 }
 
@@ -73,7 +73,7 @@ func run() error {
 	}
 
 	hasherPassword := security.NewBcryptHashing(cfg.Secret)
-	walletTR := wallet.NewWallet(comp.walletRepository, comp.transactionRepository, &logger)
+	walletTR := wallet2.NewWallet(comp.walletRepository, comp.transactionRepository, &logger)
 
 	fApp := fiber.New(fiber.Config{
 		ReadTimeout:  5 * time.Second,
@@ -83,10 +83,11 @@ func run() error {
 		AppName:      appName,
 	})
 
-	wallet.RunWalletHandler(fApp, walletTR, &logger)
-	auth.RunAuthorizationHandler(fApp, comp.userRepository, hasherPassword, &logger)
-	auth.RunRegistrationHandler(fApp, comp.userRepository, hasherPassword, &logger)
-	transaction.RunTransactionHandler(fApp, comp.transactionRepository, &logger)
+	userService := users.NewUserService(comp.userRepository, hasherPassword)
+	wallet2.RegisterWalletHandler(fApp, walletTR, &logger)
+	users.RegisterAuthorizationHandler(fApp, userService, &logger)
+	users.RegisterRegistrationHandler(fApp, comp.userRepository, hasherPassword, &logger)
+	transaction.RegisterTransactionHandler(fApp, comp.transactionRepository, &logger)
 
 	err = fApp.Listen(cfg.GetServerPort())
 	if err != nil {
@@ -124,9 +125,9 @@ func redisComponent(cfg *configs.Config) (*components, error) {
 	}
 
 	resp := &components{
-		userRepository:        users.NewRedisRepository(clientRedis),
-		walletRepository:      wallet.NewRedisRepository(clientRedis),
-		transactionRepository: transaction.NewRedisRepository(clientRedis),
+		userRepository:        repositories.NewRedisRepository(clientRedis, cfg.ExpiredAt),
+		walletRepository:      wallet2.NewRedisRepository(clientRedis, cfg.ExpiredAt),
+		transactionRepository: transaction.NewRedisRepository(clientRedis, cfg.ExpiredAt),
 	}
 
 	return resp, nil
@@ -134,8 +135,8 @@ func redisComponent(cfg *configs.Config) (*components, error) {
 
 func inMemoryComponent() (*components, error) {
 	resp := &components{
-		userRepository:        users.NewInMemoryRepository(),
-		walletRepository:      wallet.NewInMemoryRepository(),
+		userRepository:        repositories.NewInMemoryRepository(),
+		walletRepository:      wallet2.NewInMemoryRepository(),
 		transactionRepository: transaction.NewInMemoryRepository(),
 	}
 

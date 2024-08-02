@@ -11,18 +11,34 @@ import (
 )
 
 type RedisRepository struct {
-	client *redis.Client
-
+	client   *redis.Client
 	expireAt time.Duration
 }
 
-func NewRedisRepository(client *redis.Client) *RedisRepository {
+func NewRedisRepository(client *redis.Client, expiredAt time.Duration) *RedisRepository {
 	return &RedisRepository{
 		client:   client,
-		expireAt: 0, // todo: закинуть через конструктор
+		expireAt: expiredAt,
 	}
 }
 
+func (r *RedisRepository) UpdateRound(ctx context.Context, roundID models.RoundID, round models.Round) error {
+	data, err := json.Marshal(round)
+	if err != nil {
+		return fmt.Errorf("marshal: %w", err)
+	}
+
+	err = r.client.Set(ctx, roundID.String(), data, r.expireAt).Err()
+	if err != nil {
+		return fmt.Errorf("redis.Set: %w", err)
+	}
+
+	return nil
+}
+
+// Create
+// Update
+// Get
 func (r *RedisRepository) GetRound(ctx context.Context, roundID models.RoundID) (*models.Round, error) {
 	res, err := r.client.Get(ctx, roundID.String()).Result()
 	if err != nil {
@@ -53,14 +69,9 @@ func (r *RedisRepository) CreateBet(ctx context.Context, roundID models.RoundID,
 		return ErrRoundIdAlreadyExists
 	}
 
-	data, err := json.Marshal(round)
+	err = r.UpdateRound(ctx, roundID, round)
 	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-
-	err = r.client.Set(ctx, roundID.String(), data, r.expireAt).Err()
-	if err != nil {
-		return fmt.Errorf("redis.Set: %w", err)
+		return err
 	}
 
 	return nil
@@ -96,39 +107,10 @@ func (r *RedisRepository) SetWin(ctx context.Context, roundID models.RoundID, wi
 	round.Win = &winTransaction
 	round.Finished = true
 
-	data, err := json.Marshal(round)
+	err = r.UpdateRound(ctx, roundID, *round)
 	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-
-	err = r.client.Set(ctx, roundID.String(), data, r.expireAt).Err()
-	if err != nil {
-		return fmt.Errorf("redis.Set: %w", err)
+		return err
 	}
 
 	return nil
-}
-
-func (r *RedisRepository) UpdateRound(ctx context.Context, roundID models.RoundID, updateRound models.Round) error {
-	count, err := r.client.Exists(ctx, roundID.String()).Result()
-	if err != nil {
-		return fmt.Errorf("redis.Exists: %w", err)
-	}
-
-	if count == 0 {
-		return ErrRoundNotFound
-	}
-
-	data, err := json.Marshal(updateRound)
-	if err != nil {
-		return fmt.Errorf("marshal: %w", err)
-	}
-
-	err = r.client.Set(ctx, roundID.String(), data, r.expireAt).Err()
-	if err != nil {
-		return fmt.Errorf("redis.Set: %w", err)
-	}
-
-	return nil
-
 }

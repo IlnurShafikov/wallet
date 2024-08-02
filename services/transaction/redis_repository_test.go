@@ -362,7 +362,7 @@ func TestInMemoryRepository_SetWin(t *testing.T) {
 	}
 }
 
-func TestInMemoryRepository_UpdateRound(t *testing.T) {
+func TestInMemoryRepository_SaveRound(t *testing.T) {
 	s, err := miniredis.Run()
 	require.NoError(t, err)
 	defer s.Close()

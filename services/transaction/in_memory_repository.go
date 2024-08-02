@@ -58,7 +58,7 @@ func (i *InMemoryRepository) SetWin(_ context.Context, roundID models.RoundID, w
 	defer i.mu.Unlock()
 
 	round, exists := i.transactions[roundID]
-	if !exists || i.transactions[roundID].Bet.Amount == 0 {
+	if !exists {
 		return ErrRoundNotFound
 	}
 

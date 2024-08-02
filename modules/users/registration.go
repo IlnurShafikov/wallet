@@ -1,11 +1,10 @@
-package auth
+package users
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"github.com/IlnurShafikov/wallet/models"
-	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
@@ -30,14 +29,14 @@ type passwordHasher interface {
 }
 
 type RegistrationHandler struct {
-	usersCreater users.Creater
+	usersCreater Creater
 	hasher       passwordHasher
 	log          *zerolog.Logger
 }
 
-func RunRegistrationHandler(
+func RegisterRegistrationHandler(
 	router fiber.Router,
-	usersCreater users.Creater,
+	usersCreater Creater,
 	hashed passwordHasher,
 	logger *zerolog.Logger,
 ) {

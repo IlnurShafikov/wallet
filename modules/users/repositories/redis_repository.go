@@ -1,4 +1,4 @@
-package users
+package repositories
 
 import (
 	"context"
@@ -9,18 +9,16 @@ import (
 	"time"
 )
 
-var _ = Repository(&RedisRepository{})
-
 type RedisRepository struct {
 	client   *redis.Client
 	expireAt time.Duration
 	lastID   models.UserID
 }
 
-func NewRedisRepository(client *redis.Client) *RedisRepository {
+func NewRedisRepository(client *redis.Client, expiredAt time.Duration) *RedisRepository {
 	return &RedisRepository{
 		client:   client,
-		expireAt: 0,
+		expireAt: expiredAt,
 		lastID:   0,
 	}
 }

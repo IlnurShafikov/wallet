@@ -1,4 +1,4 @@
-package users
+package repositories
 
 import (
 	"context"
@@ -12,8 +12,6 @@ var (
 	ErrUserNotFound      = errors.New("user not found")
 	ErrUserAlreadyExists = errors.New("user already exists")
 )
-
-var _ = Repository(&InMemoryRepository{})
 
 type InMemoryRepository struct {
 	users  map[string]models.User

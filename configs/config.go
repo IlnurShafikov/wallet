@@ -4,15 +4,17 @@ import (
 	"errors"
 	"github.com/caarlos0/env/v10"
 	"strconv"
+	"time"
 )
 
 type Config struct {
-	Redis       Redis  `envPrefix:"REDIS_"`
-	Port        int    `env:"PORT" envDefault:"8080"`
-	Secret      string `env:"SECRET"`
-	LogLevel    string `env:"LOG_LEVEL"`
-	Local       bool   `env:"LOCAL"`
-	StorageType string `env:"STORAGE_TYPE"`
+	Redis       Redis         `envPrefix:"REDIS_"`
+	Port        int           `env:"PORT" envDefault:"8080"`
+	Secret      string        `env:"SECRET" envDefault:"runli"`
+	LogLevel    string        `env:"LOG_LEVEL"`
+	Local       bool          `env:"LOCAL"`
+	StorageType string        `env:"STORAGE_TYPE" envDefault:"redis"`
+	ExpiredAt   time.Duration `env:"LIFE_TIME" envDefault:"24h"`
 }
 
 type Redis struct {

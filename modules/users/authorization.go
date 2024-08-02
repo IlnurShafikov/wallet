@@ -1,12 +1,10 @@
-package auth
+package users
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"github.com/IlnurShafikov/wallet/models"
-	"github.com/IlnurShafikov/wallet/services/auth/security"
-	"github.com/IlnurShafikov/wallet/services/users"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
@@ -14,9 +12,8 @@ import (
 var ErrAuthorizationFailed = errors.New("authorization failed")
 
 type AuthorizationHandler struct {
-	userRepository users.Getter
-	hashedVerify   security.PasswordVerify
-	log            *zerolog.Logger
+	service Service
+	log     *zerolog.Logger
 }
 
 type loginRequest struct {
@@ -28,16 +25,14 @@ type loginResponse struct {
 	UserID models.UserID `json:"user_id"`
 }
 
-func RunAuthorizationHandler(
+func RegisterAuthorizationHandler(
 	router fiber.Router,
-	usersGetter users.Getter,
-	hashed security.PasswordVerify,
+	service Service,
 	logger *zerolog.Logger,
 ) {
 	auth := &AuthorizationHandler{
-		userRepository: usersGetter,
-		hashedVerify:   hashed,
-		log:            logger,
+		service: service,
+		log:     logger,
 	}
 
 	router.Post("/login", auth.authorization)
@@ -50,33 +45,18 @@ func (h *AuthorizationHandler) authorization(fCtx *fiber.Ctx) error {
 		return err
 	}
 
-	ctx := context.Background()
-
-	user, err := h.userRepository.Get(ctx, req.Login)
+	userID, err := h.service.Authorization(context.Background(), req.Login, req.Password)
 	if err != nil {
-		h.log.Err(err).Msg("get user failed")
-
-		if errors.Is(err, users.ErrUserNotFound) {
-			err = ErrAuthorizationFailed
-		}
-
+		h.log.Err(err).Msg("authorization failed")
 		return err
 	}
 
-	err = h.hashedVerify.Verify(req.Password, user.Password)
-	if err != nil {
-		h.log.Warn().
-			Int("userID", int(user.ID)).Err(err).
-			Msg("verify user password failed")
-		return ErrAuthorizationFailed
-	}
-
 	h.log.Debug().
-		Int("userID", int(user.ID)).
+		Int("userID", int(userID)).
 		Msg("authorization successful")
 
 	err = fCtx.Status(fiber.StatusOK).JSON(loginResponse{
-		UserID: user.ID,
+		UserID: userID,
 	})
 
 	return err

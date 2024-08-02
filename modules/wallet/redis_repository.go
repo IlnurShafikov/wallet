@@ -15,10 +15,10 @@ type RedisRepository struct {
 	expireAt time.Duration
 }
 
-func NewRedisRepository(client *redis.Client) *RedisRepository {
+func NewRedisRepository(client *redis.Client, expiredAt time.Duration) *RedisRepository {
 	return &RedisRepository{
 		client:   client,
-		expireAt: 0,
+		expireAt: expiredAt,
 	}
 }
 

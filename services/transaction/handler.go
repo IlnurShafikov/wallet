@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/IlnurShafikov/wallet/models"
+	"github.com/IlnurShafikov/wallet/modules/wallet/response"
 	"github.com/IlnurShafikov/wallet/services/transaction/request"
-	"github.com/IlnurShafikov/wallet/services/wallet/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
@@ -19,7 +19,7 @@ type Handler struct {
 	log          *zerolog.Logger
 }
 
-func RunTransactionHandler(router fiber.Router, transaction repository, logger *zerolog.Logger) {
+func RegisterTransactionHandler(router fiber.Router, transaction repository, logger *zerolog.Logger) {
 	h := &Handler{
 		transactions: transaction,
 		log:          logger,
@@ -38,7 +38,7 @@ func (h *Handler) getTransaction(fCtx *fiber.Ctx) error {
 
 	round, err := h.transactions.GetRound(fCtx.Context(), req.RoundID)
 	if err != nil {
-		h.log.Err(err).Msg("round not found")
+		h.log.Err(err).Msg("get transaction round failed")
 		return ErrRoundNotFound
 	}
 
