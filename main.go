@@ -18,6 +18,12 @@ import (
 	"time"
 )
 
+type components struct {
+	userRepository        users.Repository
+	walletRepository      wallet.Repository
+	transactionRepository transaction.Repository
+}
+
 const (
 	appName = "APP"
 )
@@ -90,14 +96,7 @@ func run() error {
 	return nil
 }
 
-type components struct {
-	userRepository        users.Repository
-	walletRepository      wallet.Repository
-	transactionRepository transaction.Repository
-}
-
 func makeComponents(cfg *configs.Config) (*components, error) {
-
 	switch cfg.StorageType {
 	case "in_memory":
 		return inMemoryComponent()
@@ -106,7 +105,6 @@ func makeComponents(cfg *configs.Config) (*components, error) {
 	default:
 		return nil, fmt.Errorf("unknow storage type: %s", cfg.StorageType)
 	}
-
 }
 
 func redisComponent(cfg *configs.Config) (*components, error) {
