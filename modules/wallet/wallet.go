@@ -5,23 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
+	"github.com/IlnurShafikov/wallet/modules/wallet/request"
 	"github.com/IlnurShafikov/wallet/services/transaction"
-	"github.com/IlnurShafikov/wallet/services/wallet/request"
 	"github.com/rs/zerolog"
 	"time"
 )
 
-type walletRepository interface {
+type Repository interface {
 	Create(context.Context, models.UserID, models.Balance) error
 	Get(context.Context, models.UserID) (models.Balance, error)
 	Update(context.Context, models.UserID, models.Amount) (models.Balance, error)
-}
-
-type transactionRepository interface {
-	GetRound(context.Context, models.RoundID) (*models.Round, error)
-	CreateBet(context.Context, models.RoundID, models.Round) error
-	SetWin(context.Context, models.RoundID, models.Transaction) error
-	UpdateRound(context.Context, models.RoundID, models.Round) error
 }
 
 var (
@@ -33,32 +26,32 @@ var (
 	ErrUpdateRoundFailed   = errors.New("update round failed")
 )
 
-type Wallet struct {
-	walletRepository walletRepository
-	trRepository     transactionRepository
+type Service struct {
+	walletRepository Repository
+	trRepository     transaction.Repository
 	log              *zerolog.Logger
 }
 
 func NewWallet(
-	walletRepository walletRepository,
-	trRepository transactionRepository,
+	walletRepository Repository,
+	trRepository transaction.Repository,
 	logger *zerolog.Logger,
-) *Wallet {
-	return &Wallet{
+) *Service {
+	return &Service{
 		walletRepository: walletRepository,
 		trRepository:     trRepository,
 		log:              logger,
 	}
 }
 
-func (w *Wallet) Get(
+func (w *Service) Get(
 	ctx context.Context,
 	userID models.UserID,
 ) (models.Balance, error) {
 	return w.walletRepository.Get(ctx, userID)
 }
 
-func (w *Wallet) Update(
+func (w *Service) Update(
 	ctx context.Context,
 	userID models.UserID,
 	amount models.Amount,
@@ -66,7 +59,7 @@ func (w *Wallet) Update(
 	return w.walletRepository.Update(ctx, userID, amount)
 }
 
-func (w *Wallet) Create(
+func (w *Service) Create(
 	ctx context.Context,
 	userID models.UserID,
 	balance models.Balance,
@@ -78,7 +71,7 @@ func (w *Wallet) Create(
 	return balance, nil
 }
 
-func (w *Wallet) Refund(
+func (w *Service) Refund(
 	ctx context.Context,
 	userID models.UserID,
 	req request.RefundTransaction,
@@ -114,7 +107,7 @@ func (w *Wallet) Refund(
 	return balance, nil
 }
 
-func (w *Wallet) Change(
+func (w *Service) Change(
 	ctx context.Context,
 	userID models.UserID,
 	req request.UpdateBalance,
@@ -128,7 +121,7 @@ func (w *Wallet) Change(
 	return 0, errors.New("amount is not be zero")
 }
 
-func (w *Wallet) createBet(
+func (w *Service) createBet(
 	ctx context.Context,
 	userID models.UserID,
 	req request.UpdateBalance,
@@ -167,7 +160,7 @@ func (w *Wallet) createBet(
 	return balance, nil
 }
 
-func (w *Wallet) setWin(
+func (w *Service) setWin(
 	ctx context.Context,
 	userID models.UserID,
 	req request.UpdateBalance,

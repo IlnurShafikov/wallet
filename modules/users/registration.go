@@ -1,6 +1,7 @@
-package auth
+package users
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/IlnurShafikov/wallet/models"
@@ -23,38 +24,32 @@ type CreateUserResponse struct {
 	UserID models.UserID `json:"user_id"`
 }
 
-type userCreater interface {
-	Create(login string, password []byte) (*models.User, error)
-}
-
 type passwordHasher interface {
 	HashPassword(password string) ([]byte, error)
 }
 
 type RegistrationHandler struct {
-	userCreate userCreater
-	hasher     passwordHasher
-	log        *zerolog.Logger
+	usersCreater Creater
+	hasher       passwordHasher
+	log          *zerolog.Logger
 }
 
-func NewRegistrationHandler(
+func RegisterRegistrationHandler(
 	router fiber.Router,
-	userCreate userCreater,
+	usersCreater Creater,
 	hashed passwordHasher,
 	logger *zerolog.Logger,
-) *RegistrationHandler {
+) {
 	handler := &RegistrationHandler{
-		userCreate: userCreate,
-		hasher:     hashed,
-		log:        logger,
+		usersCreater: usersCreater,
+		hasher:       hashed,
+		log:          logger,
 	}
 
-	router.Post("/registration", handler.Registration)
-
-	return handler
+	router.Post("/registration", handler.registration)
 }
 
-func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
+func (c *RegistrationHandler) registration(fCtx *fiber.Ctx) error {
 	req := CreateUserRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
 		c.log.Err(err).Msg("unmarshal failed")
@@ -71,8 +66,9 @@ func (c *RegistrationHandler) Registration(fCtx *fiber.Ctx) error {
 		c.log.Err(err).Msg("hashing password failed")
 		return err
 	}
+	ctx := context.Background()
 
-	user, err := c.userCreate.Create(req.Login, hashPassword)
+	user, err := c.usersCreater.Create(ctx, req.Login, hashPassword)
 	if err != nil {
 		c.log.Err(err).Msg("registration failed")
 		return err

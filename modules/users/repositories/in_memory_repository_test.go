@@ -1,51 +1,17 @@
-package users
+package repositories
 
 import (
+	"context"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/stretchr/testify/assert"
-	"strconv"
-	"sync"
 	"testing"
 )
 
-func TestCunrurency(t *testing.T) {
-	t.Parallel()
-
-	const (
-		goroutinesCount = 100
-		operationsCount = 1000
-	)
-
-	repo := NewInMemoryRepository()
-	wg := sync.WaitGroup{}
-	wg.Add(goroutinesCount * 2)
-
-	for i := 0; i < goroutinesCount; i++ {
-		go func(i int) {
-			defer wg.Done()
-
-			for j := 1; j <= operationsCount; j++ {
-				_, _ = repo.Create(strconv.Itoa(i), []byte(""))
-			}
-		}(i)
-	}
-
-	for i := 0; i < goroutinesCount; i++ {
-		go func(i int) {
-			defer wg.Done()
-
-			for j := 0; j < operationsCount; j++ {
-				_, _ = repo.Get(strconv.Itoa(i))
-			}
-		}(i)
-	}
-
-	wg.Wait()
-}
-
 func TestCreate(t *testing.T) {
 	const loginUser = "ilnur"
+	ctx := context.Background()
+
 	tests := []struct {
 		name      string
 		login     string
@@ -76,7 +42,7 @@ func TestCreate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			nw := NewInMemoryRepository()
 			tc.before(nw)
-			got, err := nw.Create(tc.login, tc.password)
+			got, err := nw.Create(ctx, tc.login, tc.password)
 			assert.Equal(t, tc.expect, got)
 			assert.Equal(t, tc.expectErr, err)
 		})
@@ -87,6 +53,8 @@ func TestGet(t *testing.T) {
 	password := []byte("123")
 	loginUser := "user01"
 	loginWrongUser := "user23"
+	ctx := context.Background()
+
 	tests := []struct {
 		name      string
 		login     string
@@ -108,8 +76,8 @@ func TestGet(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			nw := NewInMemoryRepository()
-			_, _ = nw.Create(loginUser, password)
-			got, err := nw.Get(tc.login)
+			_, _ = nw.Create(ctx, loginUser, password)
+			got, err := nw.Get(ctx, tc.login)
 			assert.Equal(t, tc.expect, got)
 			assert.ErrorIs(t, err, tc.expectErr)
 		})

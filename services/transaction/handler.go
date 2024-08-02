@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/IlnurShafikov/wallet/models"
+	"github.com/IlnurShafikov/wallet/modules/wallet/response"
 	"github.com/IlnurShafikov/wallet/services/transaction/request"
-	"github.com/IlnurShafikov/wallet/services/wallet/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
 
 type repository interface {
-	GetTransactionID(_ context.Context, roundID models.RoundID, transactionID models.TransactionID) (*models.Transaction, error)
 	GetRound(_ context.Context, roundID models.RoundID) (*models.Round, error)
 }
 
@@ -20,30 +19,26 @@ type Handler struct {
 	log          *zerolog.Logger
 }
 
-func NewHandler(router fiber.Router, transaction *InMemoryRepository, logger *zerolog.Logger) *Handler {
+func RegisterTransactionHandler(router fiber.Router, transaction repository, logger *zerolog.Logger) {
 	h := &Handler{
 		transactions: transaction,
 		log:          logger,
 	}
 
 	transactionGroup := router.Group("/transactions")
-	transactionGroup.Get("/", h.GetTransaction)
-
-	return h
+	transactionGroup.Get("/", h.getTransaction)
 }
 
-var ctx context.Context
-
-func (h *Handler) GetTransaction(fCtx *fiber.Ctx) error {
+func (h *Handler) getTransaction(fCtx *fiber.Ctx) error {
 	req := request.GetTransactionRequest{}
 	if err := json.Unmarshal(fCtx.Body(), &req); err != nil {
 		h.log.Err(err).Msg("unmarshal failed")
 		return err
 	}
 
-	round, err := h.transactions.GetRound(ctx, req.RoundID)
+	round, err := h.transactions.GetRound(fCtx.Context(), req.RoundID)
 	if err != nil {
-		h.log.Err(err).Msg("round not found")
+		h.log.Err(err).Msg("get transaction round failed")
 		return ErrRoundNotFound
 	}
 

@@ -3,22 +3,22 @@ package wallet
 import (
 	"encoding/json"
 	"github.com/IlnurShafikov/wallet/models"
-	"github.com/IlnurShafikov/wallet/services/wallet/request"
-	"github.com/IlnurShafikov/wallet/services/wallet/response"
+	"github.com/IlnurShafikov/wallet/modules/wallet/request"
+	"github.com/IlnurShafikov/wallet/modules/wallet/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog"
 )
 
 type Handler struct {
-	wallet *Wallet
+	wallet *Service
 	log    *zerolog.Logger
 }
 
-func NewHandler(
+func RegisterWalletHandler(
 	router fiber.Router,
-	wallet *Wallet,
+	wallet *Service,
 	logger *zerolog.Logger,
-) *Handler {
+) {
 	h := &Handler{
 		wallet: wallet,
 		log:    logger,
@@ -29,8 +29,6 @@ func NewHandler(
 	walletGroup.Get("/:userID", h.getBalance)
 	walletGroup.Put("/:userID", h.changeBalance)
 	walletGroup.Post("refund/:userID", h.refundTransaction)
-
-	return h
 }
 
 func (h *Handler) createWallet(fCtx *fiber.Ctx) error {

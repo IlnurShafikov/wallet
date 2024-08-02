@@ -1,13 +1,17 @@
-package users
+package repositories
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 	"sync"
 )
 
-var ErrUserNotFound = errors.New("user not found")
+var (
+	ErrUserNotFound      = errors.New("user not found")
+	ErrUserAlreadyExists = errors.New("user already exists")
+)
 
 type InMemoryRepository struct {
 	users  map[string]models.User
@@ -27,7 +31,7 @@ func (i *InMemoryRepository) getUser(login string) (models.User, bool) {
 	return us, ok
 }
 
-func (i *InMemoryRepository) Create(login string, password []byte) (*models.User, error) {
+func (i *InMemoryRepository) Create(_ context.Context, login string, password []byte) (*models.User, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
@@ -48,7 +52,7 @@ func (i *InMemoryRepository) Create(login string, password []byte) (*models.User
 	return &user, nil
 }
 
-func (i *InMemoryRepository) Get(login string) (*models.User, error) {
+func (i *InMemoryRepository) Get(_ context.Context, login string) (*models.User, error) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
