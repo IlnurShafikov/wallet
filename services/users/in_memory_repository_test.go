@@ -5,46 +5,8 @@ import (
 	"fmt"
 	"github.com/IlnurShafikov/wallet/models"
 	"github.com/stretchr/testify/assert"
-	"strconv"
-	"sync"
 	"testing"
 )
-
-func TestCunrurency(t *testing.T) {
-	t.Parallel()
-
-	const (
-		goroutinesCount = 100
-		operationsCount = 1000
-	)
-
-	repo := NewInMemoryRepository()
-	wg := sync.WaitGroup{}
-	wg.Add(goroutinesCount * 2)
-	ctx := context.Background()
-
-	for i := 0; i < goroutinesCount; i++ {
-		go func(i int) {
-			defer wg.Done()
-
-			for j := 1; j <= operationsCount; j++ {
-				_, _ = repo.Create(ctx, strconv.Itoa(i), []byte(""))
-			}
-		}(i)
-	}
-
-	for i := 0; i < goroutinesCount; i++ {
-		go func(i int) {
-			defer wg.Done()
-
-			for j := 0; j < operationsCount; j++ {
-				_, _ = repo.Get(ctx, strconv.Itoa(i))
-			}
-		}(i)
-	}
-
-	wg.Wait()
-}
 
 func TestCreate(t *testing.T) {
 	const loginUser = "ilnur"

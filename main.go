@@ -37,12 +37,6 @@ func main() {
 	}
 }
 
-type components struct {
-	userRepository        users.Repository
-	walletRepository      wallet.Repository
-	transactionRepository transaction.Repository
-}
-
 func run() error {
 	cfg, err := configs.Parse()
 	if err != nil {
@@ -94,6 +88,12 @@ func run() error {
 	}
 
 	return nil
+}
+
+type components struct {
+	userRepository        users.Repository
+	walletRepository      wallet.Repository
+	transactionRepository transaction.Repository
 }
 
 func makeComponents(cfg *configs.Config) (*components, error) {

@@ -11,7 +11,7 @@ type Config struct {
 	Port        int    `env:"PORT" envDefault:"8080"`
 	Secret      string `env:"SECRET"`
 	LogLevel    string `env:"LOG_LEVEL"`
-	Local       bool   `env:"local"`
+	Local       bool   `env:"LOCAL"`
 	StorageType string `env:"STORAGE_TYPE"`
 }
 
